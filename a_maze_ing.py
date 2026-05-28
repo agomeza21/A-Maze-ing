@@ -1,4 +1,5 @@
 import sys
+from mazegen.generator import MazeGenerator
 
 
 def main() -> None:
@@ -11,9 +12,9 @@ def main() -> None:
                 if striped_line:
                     key, value = striped_line.split("=")
                     content[key] = value
-            width = int(content["WIDTH"])       # ANCHO
-            height = int(content["HEIGHT"])     # ALTO
-            matriz = [[15 for _ in range(width)] for _ in range(height)]
+        width = int(content["WIDTH"])
+        height = int(content["HEIGHT"])
+        generator = MazeGenerator(width, height)
     except FileNotFoundError:
         print(f"Error: configuration file '{file}' not found.")
         sys.exit(1)
