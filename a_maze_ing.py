@@ -30,6 +30,7 @@ def main() -> None:
     entry = (entry_y, entry_x)
 
     generator = MazeGenerator(width, height, entry)
+    generator.generate()
 
 
 if __name__ == "__main__":
