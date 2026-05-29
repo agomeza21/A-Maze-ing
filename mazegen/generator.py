@@ -31,7 +31,7 @@ class MazeGenerator:
                 new_y = y_actual + move_y
                 new_x = x_actual + move_x
                 if (0 <= new_y < self.height and 0 <= new_x < self.width
-                        and self.visited[new_y][new_x] == False):
+                        and self.visited[new_y][new_x] is False):
                     possible.append((new_y, new_x, direction))
             if possible:
                 selected = random.choice(possible)
