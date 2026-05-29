@@ -21,10 +21,15 @@ def main() -> None:
     if len(sys.argv) != 2:
         print("Usage: python3 a_maze_ing.py <config_file>")
         sys.exit(1)
+
     content = parse_config(sys.argv[1])
     width = int(content["WIDTH"])
     height = int(content["HEIGHT"])
-    generator = MazeGenerator(width, height)
+
+    entry_x, entry_y = map(int, content["ENTRY"].split(","))
+    entry = (entry_y, entry_x)
+
+    generator = MazeGenerator(width, height, entry)
 
 
 if __name__ == "__main__":
