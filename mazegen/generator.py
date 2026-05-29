@@ -7,9 +7,9 @@ class MazeGenerator:
         self.width = width
         self.height = height
         self.entry = entry
-        self.matriz = [[15 for _ in range(width)] for _ in range(height)]
+        self.matrix = [[15 for _ in range(width)] for _ in range(height)]
         self.visited = [[False for _ in range(width)] for _ in range(height)]
-        self.movements = {
+        self.movements: dict[int, tuple[tuple[int, int], int]] = {
             0: ((-1, 0), 2),
             1: ((0, 1), 3),
             2: ((1, 0), 0),
@@ -39,8 +39,8 @@ class MazeGenerator:
                 next_x = selected[1]
                 selected_move = selected[2]
                 opposite_move = self.movements[selected_move][1]
-                self.matriz[y_actual][x_actual] &= ~(1 << selected_move)
-                self.matriz[next_y][next_x] &= ~(1 << opposite_move)
+                self.matrix[y_actual][x_actual] &= ~(1 << selected_move)
+                self.matrix[next_y][next_x] &= ~(1 << opposite_move)
                 bag.append((next_y, next_x))
                 self.visited[next_y][next_x] = True
                 y_actual = next_y
@@ -50,3 +50,13 @@ class MazeGenerator:
                 if bag:
                     y_actual = bag[-1][0]
                     x_actual = bag[-1][1]
+
+    def format_as_hex(self) -> str:
+        lines: list[str] = []
+        for line in self.matrix:
+            hex_numbers: list[str] = []
+            for num in line:
+                hex_numbers.append(f"{num:x}")
+            line_str = " ".join(hex_numbers)
+            lines.append(line_str)
+        return "\n".join(lines)
