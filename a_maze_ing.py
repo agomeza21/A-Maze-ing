@@ -2,22 +2,29 @@ import sys
 from mazegen.generator import MazeGenerator
 
 
-def main() -> None:
-    file = "config.txt"
-    content = {}
+def parse_config(file: str) -> dict[str, str]:
+    content: dict[str, str] = {}
     try:
         with open(file, "r") as f:
             for line in f:
-                striped_line = line.strip()
-                if striped_line:
-                    key, value = striped_line.split("=")
-                    content[key] = value
-        width = int(content["WIDTH"])
-        height = int(content["HEIGHT"])
-        generator = MazeGenerator(width, height)
+                stripped_line = line.strip()
+                if stripped_line and not stripped_line.startswith("#"):
+                    key, value = stripped_line.split("=", 1)
+                    content[key.strip()] = value.strip()
     except FileNotFoundError:
         print(f"Error: configuration file '{file}' not found.")
         sys.exit(1)
+    return content
+
+
+def main() -> None:
+    if len(sys.argv) != 2:
+        print("Usage: python3 a_maze_ing.py <config_file>")
+        sys.exit(1)
+    content = parse_config(sys.argv[1])
+    width = int(content["WIDTH"])
+    height = int(content["HEIGHT"])
+    generator = MazeGenerator(width, height)
 
 
 if __name__ == "__main__":
