@@ -45,7 +45,7 @@ def main() -> None:
     entry = (entry_y, entry_x)
 
     output_filename = content.get("OUTPUT_FILE")
-    key, value = output_filename.split(".", -1)
+    key, value = output_filename.split(".", -1)  # type: ignore
     if value != "txt":
         print("Error: outputfile is not a '.txt'")
         sys.exit(1)
