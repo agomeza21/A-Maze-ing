@@ -18,8 +18,8 @@ def parse_config(file: str) -> dict[str, str]:
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        print("Usage: python3 a_maze_ing.py <config_file>")
+    if len(sys.argv) not in [2, 3]:
+        print("Usage: python3 a_maze_ing.py <config_file> [output_file.maze]")
         sys.exit(1)
 
     content = parse_config(sys.argv[1])
@@ -31,6 +31,7 @@ def main() -> None:
 
     generator = MazeGenerator(width, height, entry)
     generator.generate()
+    print(generator.render())
 
 
 if __name__ == "__main__":

@@ -60,3 +60,37 @@ class MazeGenerator:
             line_str = " ".join(hex_numbers)
             lines.append(line_str)
         return "\n".join(lines)
+
+    def render(self) -> str:
+        lines: list[str] = []
+
+        for line in self.matrix:
+            top_line = ""
+            mid_line = ""
+            for cell in line:
+                if (cell & (1 << 0)) != 0:
+                    top_line = top_line + "+---"
+                else:
+                    top_line = top_line + "+   "
+                if (cell & (1 << 3)) != 0:
+                    mid_line = mid_line + "|   "
+                else:
+                    mid_line = mid_line + "    "
+            top_line = top_line + "+"
+            if (line[-1] & (1 << 1)) != 0:
+                mid_line = mid_line + "|"
+            else:
+                mid_line = mid_line + " "
+            lines.append(top_line)
+            lines.append(mid_line)
+
+        bottom_line = ""
+        for cell in self.matrix[-1]:
+            if (cell & (1 << 2)) != 0:
+                bottom_line = bottom_line + "+---"
+            else:
+                bottom_line = bottom_line + "+   "
+        bottom_line = bottom_line + "+"
+        lines.append(bottom_line)
+
+        return "\n".join(lines)
