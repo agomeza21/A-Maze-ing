@@ -1,5 +1,6 @@
 import sys
 from mazegen.generator import MazeGenerator
+from mazegen.solver import MazeSolver
 
 
 def parse_config(file: str) -> dict[str, str]:
@@ -22,6 +23,29 @@ def parse_config(file: str) -> dict[str, str]:
     return content
 
 
+def load_maze(file_path: str) -> list[list[int]]:
+    try:
+        with open(file_path, "r") as f:
+            matrix: list[list[int]] = []
+            for line in f:
+                stripped_line = line.strip()
+                if not stripped_line:
+                    continue
+                row: list[int] = []
+                for char in stripped_line:
+                    row.append(int(char, 16))
+                matrix.append(row)
+    except FileNotFoundError:
+        print(f"Error: Maze file '{file_path}' not found.")
+        sys.exit(1)
+    except ValueError:
+        print(f"Error: Invalid character found in maze file '{file_path}'."
+              f"Must be hexadecimal.")
+        sys.exit(1)
+
+    return matrix
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         print("Usage: python3 a_maze_ing.py <config_file>")
@@ -34,8 +58,7 @@ def main() -> None:
         height = int(content["HEIGHT"])
         entry_x, entry_y = map(int, content["ENTRY"].split(","))
     except (KeyError, ValueError):
-        print("Error: Invalid or missing numeric values in "
-              "configuration file.")
+        print("Error: Invalid or missing ENTRY in configuration file.")
         sys.exit(1)
 
     if not (0 <= entry_x < width and 0 <= entry_y < height):
@@ -44,13 +67,24 @@ def main() -> None:
 
     entry = (entry_y, entry_x)
 
-    output_filename = content.get("OUTPUT_FILE")
-    key, value = output_filename.split(".", -1)  # type: ignore
-    if value != "txt":
-        print("Error: outputfile is not a '.txt'")
+    try:
+        exit_x, exit_y = map(int, content["EXIT"].split(","))
+    except (KeyError, ValueError):
+        print("Error: Invalid or missing EXIT in configuration file.")
         sys.exit(1)
+
+    if not (0 <= exit_x < width and 0 <= exit_y < height):
+        print("Error: EXIT coordinates are out of maze bounds.")
+        sys.exit(1)
+
+    exit_coords = (exit_y, exit_x)
+
+    output_filename = content.get("OUTPUT_FILE")
     if not output_filename:
         output_filename = "maze.txt"
+    if not output_filename.endswith(".txt"):
+        print("Error: outputfile is not a '.txt'")
+        sys.exit(1)
 
     generator = MazeGenerator(width, height, entry)
     generator.generate()
@@ -63,6 +97,11 @@ def main() -> None:
     except Exception as e:
         print(f"Error saving file: {e}")
         sys.exit(1)
+
+    matrix = load_maze(output_filename)
+    solver = MazeSolver(matrix, entry, exit_coords)
+    solution = solver.solve()
+    print(f"Path found: {solution}")
 
     print("\n--- GRAPHIC RENDER ---")
     print(generator.render())
