@@ -57,8 +57,7 @@ def main() -> None:
         height = int(content["HEIGHT"])
         entry_x, entry_y = map(int, content["ENTRY"].split(","))
     except (KeyError, ValueError):
-        print("Error: Invalid or missing numeric values in "
-              "configuration file.")
+        print("Error: Invalid or missing ENTRY in configuration file.")
         sys.exit(1)
 
     if not (0 <= entry_x < width and 0 <= entry_y < height):
