@@ -56,8 +56,8 @@ class MazeGenerator:
         for line in self.matrix:
             hex_numbers: list[str] = []
             for num in line:
-                hex_numbers.append(f"{num:x}")
-            line_str = " ".join(hex_numbers)
+                hex_numbers.append(f"{num:X}")
+            line_str = "".join(hex_numbers)
             lines.append(line_str)
         return "\n".join(lines)
 
