@@ -22,6 +22,29 @@ def parse_config(file: str) -> dict[str, str]:
     return content
 
 
+def load_maze(file_path: str) -> list[list[int]]:
+    try:
+        with open(file_path, "r") as f:
+            matrix: list[list[int]] = []
+            for line in f:
+                stripped_line = line.strip()
+                if not stripped_line:
+                    continue
+                row: list[int] = []
+                for char in stripped_line:
+                    row.append(int(char, 16))
+                matrix.append(row)
+    except FileNotFoundError:
+        print(f"Error: Maze file '{file_path}' not found.")
+        sys.exit(1)
+    except ValueError:
+        print(f"Error: Invalid character found in maze file '{file_path}'."
+              f"Must be hexadecimal.")
+        sys.exit(1)
+
+    return matrix
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         print("Usage: python3 a_maze_ing.py <config_file>")
