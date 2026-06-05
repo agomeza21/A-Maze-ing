@@ -101,10 +101,10 @@ def main() -> None:
     matrix = load_maze(output_filename)
     solver = MazeSolver(matrix, entry, exit_coords)
     solution = solver.solve()
-    print(f"Path found: {solution}")
+    print(generator.render(solution))
 
-    print("\n--- GRAPHIC RENDER ---")
-    print(generator.render())
+    """ print("\n--- GRAPHIC RENDER ---")
+    print(generator.render()) """
 
 
 if __name__ == "__main__":

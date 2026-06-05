@@ -61,21 +61,72 @@ class MazeGenerator:
             lines.append(line_str)
         return "\n".join(lines)
 
-    def render(self) -> str:
+    def get_solution_char(self, y: int, x: int,
+                          solution: list[tuple[int, int]]) -> str:
+        cell_index = solution.index((y, x))
+        current_y, current_x = solution[cell_index]
+        coming_from = ""
+        going_to = ""
+
+        if cell_index > 0:
+            previous_y, previous_x = solution[cell_index - 1]
+            if previous_y - current_y == -1:
+                coming_from = "N"
+            elif previous_y - current_y == 1:
+                coming_from = "S"
+            elif previous_x - current_x == 1:
+                coming_from = "E"
+            elif previous_x - current_x == -1:
+                coming_from = "W"
+
+        if cell_index < len(solution) - 1:
+            next_y, next_x = solution[cell_index + 1]
+            if next_y - current_y == -1:
+                going_to = "N"
+            elif next_y - current_y == 1:
+                going_to = "S"
+            elif next_x - current_x == 1:
+                going_to = "E"
+            elif next_x - current_x == -1:
+                going_to = "W"
+
+        directions = frozenset([coming_from, going_to])
+        char_map = {
+            frozenset(["W", "E"]): "───",
+            frozenset(["N", "S"]): " │ ",
+            frozenset(["N", "E"]): " └─",
+            frozenset(["N", "W"]): "─┘ ",
+            frozenset(["S", "E"]): " ┌─",
+            frozenset(["S", "W"]): "─┐ ",
+            frozenset(["", "E"]): "───",
+            frozenset(["", "W"]): "───",
+            frozenset(["", "N"]): " │ ",
+            frozenset(["", "S"]): " │ ",
+        }
+        return char_map.get(directions, " * ")
+
+    def render(self, solution: list[tuple[int, int]] | None = None) -> str:
         lines: list[str] = []
 
-        for line in self.matrix:
+        for y, line in enumerate(self.matrix):
             top_line = ""
             mid_line = ""
-            for cell in line:
+            for x, cell in enumerate(line):
                 if (cell & (1 << 0)) != 0:
                     top_line = top_line + "+---"
                 else:
                     top_line = top_line + "+   "
-                if (cell & (1 << 3)) != 0:
-                    mid_line = mid_line + "|   "
+                if solution and (y, x) in solution:
+                    solution_char = self.get_solution_char(y, x, solution)
+                    if (cell & (1 << 3)) != 0:
+                        mid_line = mid_line + f"|{solution_char}"
+                    else:
+                        mid_line = mid_line + f" {solution_char}"
                 else:
-                    mid_line = mid_line + "    "
+                    if (cell & (1 << 3)) != 0:
+                        mid_line = mid_line + "|   "
+                    else:
+                        mid_line = mid_line + "    "
             top_line = top_line + "+"
             if (line[-1] & (1 << 1)) != 0:
                 mid_line = mid_line + "|"
