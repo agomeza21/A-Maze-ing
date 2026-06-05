@@ -24,7 +24,7 @@ def parse_config(file: str) -> dict[str, str]:
 
 
 def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
-                                               tuple[int, int], str]:
+                                               tuple[int, int], str, bool]:
     try:
         width = int(content["WIDTH"])
         height = int(content["HEIGHT"])
@@ -54,13 +54,32 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
         print("Error: outputfile is not a '.txt'")
         sys.exit(1)
 
-    return width, height, entry, exit_coords, output_filename
+    try:
+        perfect_str = content.get("PERFECT")
+        if not perfect_str:
+            perfect_str = "True"
+        if perfect_str.upper() == "TRUE":
+            perfect = True
+        elif perfect_str.upper() == "FALSE":
+            perfect = False
+    except ValueError:
+        print("Error: Invalid PERFECT in configuration file.")
+        sys.exit(1)
+
+    return width, height, entry, exit_coords, output_filename, perfect
 
 
-def save_maze_file(output_filename: str, data: str) -> None:
+def save_maze_file(output_filename: str, data: str, entry: tuple[int, int],
+                   exit_coords: tuple[int, int], letters: str) -> None:
     try:
         with open(output_filename, "w") as f:
             f.write(data)
+            f.write("\n\n")
+            entry_str = f"{entry[1]},{entry[0]}\n"
+            f.write(entry_str)
+            exit_str = f"{exit_coords[1]},{exit_coords[0]}\n"
+            f.write(exit_str)
+            f.write(f"{letters}")
         print("Maze generated correctly!")
         print(f"File saved as '{output_filename}'.")
     except Exception as e:
@@ -75,7 +94,7 @@ def load_maze(file_path: str) -> list[list[int]]:
             for line in f:
                 stripped_line = line.strip()
                 if not stripped_line:
-                    continue
+                    break
                 row: list[int] = []
                 for char in stripped_line:
                     row.append(int(char, 16))
@@ -97,7 +116,7 @@ def main() -> None:
         sys.exit(1)
 
     content = parse_config(sys.argv[1])
-    width, height, entry, exit_coords, output_filename = validate(content)
+    width, height, entry, exit_coords, out_file, perfect = validate(content)
 
     show_solution = False
 
@@ -113,11 +132,16 @@ def main() -> None:
         if choice == "1":
             generator = MazeGenerator(width, height, entry)
             generator.generate()
-            save_maze_file(output_filename, generator.format_as_hex())
+            if not perfect:
+                generator.apply_imperfection()
+            solver = MazeSolver(generator.matrix, entry, exit_coords)
+            solution = solver.solve()
+            save_maze_file(out_file, generator.format_as_hex(),
+                           entry, exit_coords, generator.get_letters(solution))
             print(generator.render())
         elif choice == "2":
             show_solution = not show_solution
-            matrix = load_maze(output_filename)
+            matrix = load_maze(out_file)
             if matrix:
                 renderer = MazeGenerator(width, height, entry)
                 renderer.matrix = matrix

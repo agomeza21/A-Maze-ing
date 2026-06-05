@@ -51,6 +51,13 @@ class MazeGenerator:
                     y_actual = bag[-1][0]
                     x_actual = bag[-1][1]
 
+    def apply_imperfection(self) -> None:
+        for y in range(1, self.height - 1, 3):
+            for x in range(1, self.width - 1, 3):
+                if random.randint(0, 100) < 50:
+                    self.matrix[y][x] &= ~4
+                    self.matrix[y + 1][x] &= ~1
+
     def format_as_hex(self) -> str:
         lines: list[str] = []
         for line in self.matrix:
@@ -60,6 +67,21 @@ class MazeGenerator:
             line_str = "".join(hex_numbers)
             lines.append(line_str)
         return "\n".join(lines)
+
+    def get_letters(self, solution: list[tuple[int, int]]) -> str:
+        letters: list[str] = []
+        for cell_index in range(len(solution) - 1):
+            current_y, current_x = solution[cell_index]
+            next_y, next_x = solution[cell_index + 1]
+            if next_y - current_y == -1:
+                letters.append("N")
+            elif next_y - current_y == 1:
+                letters.append("S")
+            elif next_x - current_x == 1:
+                letters.append("E")
+            elif next_x - current_x == -1:
+                letters.append("W")
+        return "".join(letters)
 
     def get_solution_char(self, y: int, x: int,
                           solution: list[tuple[int, int]]) -> str:
