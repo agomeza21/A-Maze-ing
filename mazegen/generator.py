@@ -52,8 +52,16 @@ class MazeGenerator:
                     x_actual = bag[-1][1]
 
     def apply_imperfection(self) -> None:
+        start_y = (self.height - 5) // 2
+        start_x = (self.width - 7) // 2
+
         for y in range(1, self.height - 1, 3):
             for x in range(1, self.width - 1, 3):
+                if (start_y <= y < start_y + 5 and start_x <= x < start_x
+                    + 7) or (start_y <= y + 1 < start_y + 5 and start_x <=
+                             x < start_x + 7):
+                    continue
+
                 if random.randint(0, 100) < 50:
                     self.matrix[y][x] &= ~4
                     self.matrix[y + 1][x] &= ~1
@@ -146,9 +154,15 @@ class MazeGenerator:
                         mid_line = mid_line + f" {solution_char}"
                 else:
                     if (cell & (1 << 3)) != 0:
-                        mid_line = mid_line + "|   "
+                        pared_izquierda = "|"
                     else:
-                        mid_line = mid_line + "    "
+                        pared_izquierda = " "
+                    if cell == 15:
+                        contenido = " █ "
+                    else:
+                        contenido = "   "
+                    mid_line = mid_line + pared_izquierda + contenido
+
             top_line = top_line + "+"
             if (line[-1] & (1 << 1)) != 0:
                 mid_line = mid_line + "|"
@@ -167,3 +181,45 @@ class MazeGenerator:
         lines.append(bottom_line)
 
         return "\n".join(lines)
+
+    def apply_42(self, before_generating: bool = True) -> None:
+        pattern = [
+            [1, 0, 1, 0, 1, 1, 1],
+            [1, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 0, 1, 1, 1],
+            [0, 0, 1, 0, 1, 0, 0],
+            [0, 0, 1, 0, 1, 1, 1]
+        ]
+
+        if self.height < 5 or self.width < 7:
+            print("Error: 42 pattern will be omitted since the maze is "
+                  "smaller than it")
+            return
+
+        start_y = (self.height - 5) // 2
+        start_x = (self.width - 7) // 2
+
+        for pattern_y in range(5):
+            for pattern_x in range(7):
+                real_y = start_y + pattern_y
+                real_x = start_x + pattern_x
+                if pattern[pattern_y][pattern_x] == 1:
+                    self.matrix[real_y][real_x] = 15
+                    self.visited[real_y][real_x] = True
+                else:
+                    self.matrix[real_y][real_x] = 15
+                    self.visited[real_y][real_x] = False
+
+        for pattern_y in range(5):
+            for pattern_x in range(7):
+                if pattern[pattern_y][pattern_x] == 1:
+                    real_y = start_y + pattern_y
+                    real_x = start_x + pattern_x
+                    if real_y > 0:
+                        self.matrix[real_y - 1][real_x] |= (1 << 2)
+                    if real_y < self.height - 1:
+                        self.matrix[real_y + 1][real_x] |= (1 << 0)
+                    if real_x > 0:
+                        self.matrix[real_y][real_x - 1] |= (1 << 1)
+                    if real_x < self.width - 1:
+                        self.matrix[real_y][real_x + 1] |= (1 << 3)

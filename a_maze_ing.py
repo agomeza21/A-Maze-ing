@@ -131,6 +131,7 @@ def main() -> None:
 
         if choice == "1":
             generator = MazeGenerator(width, height, entry)
+            generator.apply_42()
             generator.generate()
             if not perfect:
                 generator.apply_imperfection()
