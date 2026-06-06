@@ -134,7 +134,8 @@ def main() -> None:
             generator.generate()
             if not perfect:
                 generator.apply_imperfection()
-            solver = MazeSolver(generator.matrix, entry, exit_coords)
+            solver = MazeSolver(generator.matrix, entry,
+                                exit_coords, perfect=perfect)
             solution = solver.solve()
             save_maze_file(out_file, generator.format_as_hex(),
                            entry, exit_coords, generator.get_letters(solution))
@@ -146,7 +147,8 @@ def main() -> None:
                 renderer = MazeGenerator(width, height, entry)
                 renderer.matrix = matrix
                 if show_solution:
-                    solver = MazeSolver(matrix, entry, exit_coords)
+                    solver = MazeSolver(matrix, entry,
+                                        exit_coords, perfect=perfect)
                     solution = solver.solve()
                     print(renderer.render(solution))
                 else:
