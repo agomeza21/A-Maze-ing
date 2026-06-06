@@ -79,7 +79,7 @@ def save_maze_file(output_filename: str, data: str, entry: tuple[int, int],
             f.write(entry_str)
             exit_str = f"{exit_coords[1]},{exit_coords[0]}\n"
             f.write(exit_str)
-            f.write(f"{letters}")
+            f.write(f"{letters}\n")
         print("Maze generated correctly!")
         print(f"File saved as '{output_filename}'.")
     except Exception as e:
