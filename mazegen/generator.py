@@ -137,14 +137,18 @@ class MazeGenerator:
 
     def render(self, exit_coords: tuple[int, int],
                solution: list[tuple[int, int]]
-               | None = None, color: str = "") -> str:
+               | None = None, wall_color: str = "",
+               pattern_color: str = "") -> str:
         reset = "\033[0m"
         cyan = "\033[96m"
         green = "\033[92m"
         red = "\033[91m"
 
         def coloring(text: str) -> str:
-            return f"{color}{text}{reset}" if color else text
+            return f"{wall_color}{text}{reset}" if wall_color else text
+
+        def coloring_pattern(text: str) -> str:
+            return f"{pattern_color}{text}{reset}" if pattern_color else text
 
         lines: list[str] = []
 
@@ -180,7 +184,7 @@ class MazeGenerator:
                     elif (y, x) == exit_coords:
                         content = f"{red} E {reset}"
                     elif cell == 15:
-                        content = coloring(" █ ")
+                        content = coloring_pattern(" █ ")
                     else:
                         content = "   "
                     mid_line = mid_line + left_wall + content

@@ -135,23 +135,28 @@ def main() -> None:
 
     show_solution = False
 
-    colors = [
-        "",           # 0: Por defecto
-        "\033[91m",   # 1: Rojo Claro
-        "\033[31m",   # 2: Rojo Oscuro
-        "\033[32m",   # 4: Verde Oscuro
-        "\033[94m",   # 5: Azul Claro
-        "\033[34m",   # 6: Azul Oscuro
-        "\033[93m",   # 7: Amarillo Claro
-        "\033[33m",   # 8: Naranja / Oro
-        "\033[95m",   # 9: Magenta Claro
+    themes = [
+        ("", ""),
+        ("\033[38;5;203m", "\033[38;5;88m"),
+        ("\033[38;5;88m", "\033[38;5;203m"),
+        ("\033[38;5;120m", "\033[38;5;28m"),
+        ("\033[38;5;28m", "\033[38;5;120m"),
+        ("\033[38;5;25m", "\033[38;5;117m"),
+        ("\033[38;5;228m", "\033[38;5;130m"),
+        ("\033[38;5;130m", "\033[38;5;228m"),
+        ("\033[38;5;219m", "\033[38;5;90m"),
+        ("\033[38;5;90m", "\033[38;5;219m"),
     ]
-    color_names = [
-        "Default", "Light Red", "Dark Red", "Dark Green",
-        "Light Blue", "Dark Blue", "Light Yellow", "Orange/Gold",
-        "Light Magenta"
+    theme_names = [
+        "Por defecto",
+        "Rojo Pastel / 42 Escarlata", "Escarlata / 42 Rojo Pastel",
+        "Verde Menta / 42 Esmeralda", "Esmeralda / 42 Verde Menta",
+        "Azul Cielo / 42 Azul Zafiro", "Azul Zafiro / 42 Azul Cielo",
+        "Amarillo Vainilla / 42 Óxido", "Naranja Óxido / 42 Amarillo",
+        "Rosa Claro / 42 Magenta", "Magenta / 42 Rosa Claro",
+        "Cian Claro / 42 Turquesa", "Turquesa / 42 Cian Claro"
     ]
-    current_color = 0
+    current_theme = 0
 
     while True:
         print("\n--- A-MAZE-ING MENU ---\n")
@@ -162,7 +167,10 @@ def main() -> None:
 
         choice = input("\nSelect an option: ").strip()
 
+        c_wall, c_pattern = themes[current_theme]
+
         if choice == "1":
+            show_solution = False
             generator = MazeGenerator(width, height, entry)
             generator.apply_42()
             generator.generate()
@@ -173,7 +181,9 @@ def main() -> None:
             solution = solver.solve()
             save_maze_file(out_file, generator.format_as_hex(),
                            entry, exit_coords, generator.get_letters(solution))
-            print(generator.render(exit_coords, color=colors[current_color]))
+            print(generator.render(exit_coords, solution if show_solution
+                                   else None, wall_color=c_wall,
+                                   pattern_color=c_pattern))
 
         elif choice == "2":
             show_solution = not show_solution
@@ -186,14 +196,18 @@ def main() -> None:
                                         exit_coords, perfect=perfect)
                     solution = solver.solve()
                     print(renderer.render(exit_coords, solution,
-                                          color=colors[current_color]))
+                                          wall_color=c_wall,
+                                          pattern_color=c_pattern))
                 else:
                     print(renderer.render(exit_coords, None,
-                                          color=colors[current_color]))
+                                          wall_color=c_wall,
+                                          pattern_color=c_pattern))
+            print("\n(There is no maze generated. Click 1 to generate one).")
 
         elif choice == "3":
-            current_color = (current_color + 1) % len(colors)
-            print(f"Wall colors changed to: {color_names[current_color]}")
+            current_theme = (current_theme + 1) % len(themes)
+            c_wall, c_pattern = themes[current_theme]
+            print(f"Wall colors changed to: {theme_names[current_theme]}")
             if os.path.exists(out_file):
                 matrix = load_maze(out_file)
                 if matrix:
@@ -204,10 +218,12 @@ def main() -> None:
                                             perfect=perfect)
                         solution = solver.solve()
                         print(renderer.render(exit_coords, solution,
-                                              color=colors[current_color]))
+                                              wall_color=c_wall,
+                                              pattern_color=c_pattern))
                     else:
                         print(renderer.render(exit_coords, None,
-                                              color=colors[current_color]))
+                                              wall_color=c_wall,
+                                              pattern_color=c_pattern))
             else:
                 print("\n(There is no maze generated. "
                       "Click 1 to generate one).")
