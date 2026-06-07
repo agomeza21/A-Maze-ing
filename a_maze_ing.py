@@ -79,7 +79,7 @@ def save_maze_file(output_filename: str, data: str, entry: tuple[int, int],
             f.write(entry_str)
             exit_str = f"{exit_coords[1]},{exit_coords[0]}\n"
             f.write(exit_str)
-            f.write(f"{letters}")
+            f.write(f"{letters}\n")
         print("Maze generated correctly!")
         print(f"File saved as '{output_filename}'.")
     except Exception as e:
@@ -131,10 +131,12 @@ def main() -> None:
 
         if choice == "1":
             generator = MazeGenerator(width, height, entry)
+            generator.apply_42()
             generator.generate()
             if not perfect:
                 generator.apply_imperfection()
-            solver = MazeSolver(generator.matrix, entry, exit_coords)
+            solver = MazeSolver(generator.matrix, entry,
+                                exit_coords, perfect=perfect)
             solution = solver.solve()
             save_maze_file(out_file, generator.format_as_hex(),
                            entry, exit_coords, generator.get_letters(solution))
@@ -146,7 +148,8 @@ def main() -> None:
                 renderer = MazeGenerator(width, height, entry)
                 renderer.matrix = matrix
                 if show_solution:
-                    solver = MazeSolver(matrix, entry, exit_coords)
+                    solver = MazeSolver(matrix, entry,
+                                        exit_coords, perfect=perfect)
                     solution = solver.solve()
                     print(renderer.render(solution))
                 else:
