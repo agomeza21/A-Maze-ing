@@ -82,7 +82,7 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
 
     perfect_str = content.get("PERFECT")
     if not perfect_str:
-        perfect_str = True
+        perfect_str = "True"
     else:
         val = perfect_str.upper()
         if val == "TRUE":
