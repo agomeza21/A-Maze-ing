@@ -1,4 +1,5 @@
 import sys
+import os
 from mazegen.generator import MazeGenerator
 from mazegen.solver import MazeSolver
 
@@ -46,6 +47,20 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
         print("Error: EXIT coordinates are out of maze bounds.")
         sys.exit(1)
     exit_coords = (exit_y, exit_x)
+
+    if height >= 5 and width >= 7:
+        start_y = (height - 5) // 2
+        start_x = (width - 7) // 2
+        if (start_y <= entry[0] < start_y
+                + 5) and (start_x <= entry[1] < start_x + 7):
+            print("Error: ENTRY coordinates cannot be "
+                  "inside the central 42 pattern.")
+            sys.exit(1)
+        if (start_y <= exit_coords[0] < start_y
+                + 5) and (start_x <= exit_coords[1] < start_x + 7):
+            print("Error: EXIT coordinates cannot be "
+                  "inside the central 42 pattern.")
+            sys.exit(1)
 
     output_filename = content.get("OUTPUT_FILE")
     if not output_filename:
@@ -120,6 +135,24 @@ def main() -> None:
 
     show_solution = False
 
+    colors = [
+        "",           # 0: Por defecto
+        "\033[91m",   # 1: Rojo Claro
+        "\033[31m",   # 2: Rojo Oscuro
+        "\033[32m",   # 4: Verde Oscuro
+        "\033[94m",   # 5: Azul Claro
+        "\033[34m",   # 6: Azul Oscuro
+        "\033[93m",   # 7: Amarillo Claro
+        "\033[33m",   # 8: Naranja / Oro
+        "\033[95m",   # 9: Magenta Claro
+    ]
+    color_names = [
+        "Default", "Light Red", "Dark Red", "Dark Green",
+        "Light Blue", "Dark Blue", "Light Yellow", "Orange/Gold",
+        "Light Magenta"
+    ]
+    current_color = 0
+
     while True:
         print("\n--- A-MAZE-ING MENU ---\n")
         print("1. Generate and save maze")
@@ -140,7 +173,8 @@ def main() -> None:
             solution = solver.solve()
             save_maze_file(out_file, generator.format_as_hex(),
                            entry, exit_coords, generator.get_letters(solution))
-            print(generator.render())
+            print(generator.render(exit_coords, color=colors[current_color]))
+
         elif choice == "2":
             show_solution = not show_solution
             matrix = load_maze(out_file)
@@ -151,9 +185,33 @@ def main() -> None:
                     solver = MazeSolver(matrix, entry,
                                         exit_coords, perfect=perfect)
                     solution = solver.solve()
-                    print(renderer.render(solution))
+                    print(renderer.render(exit_coords, solution,
+                                          color=colors[current_color]))
                 else:
-                    print(renderer.render(None))
+                    print(renderer.render(exit_coords, None,
+                                          color=colors[current_color]))
+
+        elif choice == "3":
+            current_color = (current_color + 1) % len(colors)
+            print(f"Wall colors changed to: {color_names[current_color]}")
+            if os.path.exists(out_file):
+                matrix = load_maze(out_file)
+                if matrix:
+                    renderer = MazeGenerator(width, height, entry)
+                    renderer.matrix = matrix
+                    if show_solution:
+                        solver = MazeSolver(matrix, entry, exit_coords,
+                                            perfect=perfect)
+                        solution = solver.solve()
+                        print(renderer.render(exit_coords, solution,
+                                              color=colors[current_color]))
+                    else:
+                        print(renderer.render(exit_coords, None,
+                                              color=colors[current_color]))
+            else:
+                print("\n(There is no maze generated. "
+                      "Click 1 to generate one).")
+
         elif choice == "4":
             print("Goodbye!")
             break
