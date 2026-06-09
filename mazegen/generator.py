@@ -3,10 +3,11 @@ import random
 
 class MazeGenerator:
     def __init__(self, width: int, height: int,
-                 entry: tuple[int, int]) -> None:
+                 entry: tuple[int, int], rng: random.Random) -> None:
         self.width = width
         self.height = height
         self.entry = entry
+        self.rng = rng
         self.matrix = [[15 for _ in range(width)] for _ in range(height)]
         self.visited = [[False for _ in range(width)] for _ in range(height)]
         self.movements: dict[int, tuple[tuple[int, int], int]] = {
@@ -34,7 +35,7 @@ class MazeGenerator:
                         and self.visited[new_y][new_x] is False):
                     possible.append((new_y, new_x, direction))
             if possible:
-                selected = random.choice(possible)
+                selected = self.rng.choice(possible)
                 next_y = selected[0]
                 next_x = selected[1]
                 selected_move = selected[2]
@@ -62,7 +63,7 @@ class MazeGenerator:
                              x < start_x + 7):
                     continue
 
-                if random.randint(0, 100) < 50:
+                if self.rng.randint(0, 100) < 50:
                     self.matrix[y][x] &= ~4
                     self.matrix[y + 1][x] &= ~1
 
