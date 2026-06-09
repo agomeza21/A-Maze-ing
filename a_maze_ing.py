@@ -232,7 +232,8 @@ def main() -> None:
         print("1. Re-generate and save maze")
         print("2. Show/Hide solution to maze")
         print("3. Change wall colours")
-        print("4. Exit")
+        print("4. Save maze as drawing")
+        print("5. Exit")
 
         choice = input("\nSelect an option: ").strip()
         c_wall, c_pattern = themes[current_theme]
@@ -259,6 +260,15 @@ def main() -> None:
                                 c_pattern)
 
         elif choice == "4":
+            matrix_txt = load_maze(out_file)
+            drawing = MazeGenerator(width, height, entry, rng=random.Random())
+            drawing.matrix = matrix_txt
+            blueprint = drawing.render(exit_c, use_colors=False)
+            with open("maze_blueprint.txt", "w") as f:
+                f.write(blueprint)
+                print("[BONUS] Blueprint saved as maze_blueprint.txt")
+
+        elif choice == "5":
             print("Goodbye!")
             break
         else:

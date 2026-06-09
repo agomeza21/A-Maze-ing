@@ -137,13 +137,19 @@ class MazeGenerator:
         return char_map.get(directions, " * ")
 
     def render(self, exit_coords: tuple[int, int],
-               solution: list[tuple[int, int]]
-               | None = None, wall_color: str = "",
-               pattern_color: str = "") -> str:
+               solution: list[tuple[int, int]] | None = None,
+               wall_color: str = "", pattern_color: str = "",
+               use_colors: bool = True) -> str:
         reset = "\033[0m"
         cyan = "\033[96m"
         green = "\033[92m"
         red = "\033[91m"
+
+        if use_colors is False:
+            reset = ""
+            cyan = ""
+            green = ""
+            red = ""
 
         def coloring(text: str) -> str:
             return f"{wall_color}{text}{reset}" if wall_color else text
