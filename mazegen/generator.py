@@ -135,7 +135,21 @@ class MazeGenerator:
         }
         return char_map.get(directions, " * ")
 
-    def render(self, solution: list[tuple[int, int]] | None = None) -> str:
+    def render(self, exit_coords: tuple[int, int],
+               solution: list[tuple[int, int]]
+               | None = None, wall_color: str = "",
+               pattern_color: str = "") -> str:
+        reset = "\033[0m"
+        cyan = "\033[96m"
+        green = "\033[92m"
+        red = "\033[91m"
+
+        def coloring(text: str) -> str:
+            return f"{wall_color}{text}{reset}" if wall_color else text
+
+        def coloring_pattern(text: str) -> str:
+            return f"{pattern_color}{text}{reset}" if pattern_color else text
+
         lines: list[str] = []
 
         for y, line in enumerate(self.matrix):
@@ -143,29 +157,41 @@ class MazeGenerator:
             mid_line = ""
             for x, cell in enumerate(line):
                 if (cell & (1 << 0)) != 0:
-                    top_line = top_line + "+---"
+                    top_line = top_line + coloring("+━━━")
                 else:
-                    top_line = top_line + "+   "
+                    top_line = top_line + coloring("+") + "   "
+
                 if solution and (y, x) in solution:
                     solution_char = self.get_solution_char(y, x, solution)
-                    if (cell & (1 << 3)) != 0:
-                        mid_line = mid_line + f"|{solution_char}"
+                    if (y, x) == self.entry:
+                        solution_char = f"{green}{solution_char}{reset}"
+                    elif (y, x) == exit_coords:
+                        solution_char = f"{red}{solution_char}{reset}"
                     else:
-                        mid_line = mid_line + f" {solution_char}"
+                        solution_char = f"{cyan}{solution_char}{reset}"
+
+                    if (cell & (1 << 3)) != 0:
+                        mid_line = mid_line + coloring("┃") + solution_char
+                    else:
+                        mid_line = mid_line + " " + solution_char
                 else:
                     if (cell & (1 << 3)) != 0:
-                        pared_izquierda = "|"
+                        left_wall = coloring("┃")
                     else:
-                        pared_izquierda = " "
-                    if cell == 15:
-                        contenido = " █ "
+                        left_wall = " "
+                    if (y, x) == self.entry:
+                        content = f"{green} S {reset}"
+                    elif (y, x) == exit_coords:
+                        content = f"{red} E {reset}"
+                    elif cell == 15:
+                        content = coloring_pattern(" █ ")
                     else:
-                        contenido = "   "
-                    mid_line = mid_line + pared_izquierda + contenido
+                        content = "   "
+                    mid_line = mid_line + left_wall + content
 
-            top_line = top_line + "+"
+            top_line = top_line + coloring("+")
             if (line[-1] & (1 << 1)) != 0:
-                mid_line = mid_line + "|"
+                mid_line = mid_line + coloring("┃")
             else:
                 mid_line = mid_line + " "
             lines.append(top_line)
@@ -174,10 +200,10 @@ class MazeGenerator:
         bottom_line = ""
         for cell in self.matrix[-1]:
             if (cell & (1 << 2)) != 0:
-                bottom_line = bottom_line + "+---"
+                bottom_line = bottom_line + coloring("+━━━")
             else:
-                bottom_line = bottom_line + "+   "
-        bottom_line = bottom_line + "+"
+                bottom_line = bottom_line + coloring("+") + "   "
+        bottom_line = bottom_line + coloring("+")
         lines.append(bottom_line)
 
         return "\n".join(lines)
@@ -191,7 +217,7 @@ class MazeGenerator:
             [0, 0, 1, 0, 1, 1, 1]
         ]
 
-        if self.height < 5 or self.width < 7:
+        if self.height < 7 or self.width < 9:
             print("Error: 42 pattern will be omitted since the maze is "
                   "smaller than it")
             return
