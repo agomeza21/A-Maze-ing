@@ -27,6 +27,7 @@ def parse_config(file: str) -> dict[str, str]:
 
 def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
                                                tuple[int, int], str, bool,
+                                               str | None, str | None,
                                                str | None]:
     try:
         width = int(content["WIDTH"])
@@ -96,7 +97,19 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
 
     seed = content.get("SEED")
 
-    return width, height, entry, exit_coords, output_filename, perfect, seed
+    color_wall = content.get("COLOR_WALL")
+    if color_wall is not None:
+        ansi_wall = f"\033[38;5;{color_wall}m"
+    else:
+        ansi_wall = None
+    color_pattern = content.get("COLOR_PATTERN")
+    if color_pattern is not None:
+        ansi_pattern = f"\033[38;5;{color_pattern}m"
+    else:
+        ansi_pattern = None
+
+    return (width, height, entry, exit_coords, output_filename,
+            perfect, seed, ansi_wall, ansi_pattern)
 
 
 def save_maze_file(output_filename: str, data: str, entry: tuple[int, int],
@@ -203,7 +216,8 @@ def main() -> None:
         sys.exit(1)
 
     content = parse_config(sys.argv[1])
-    width, height, entry, exit_c, out_file, perfect, seed_v = validate(content)
+    (width, height, entry, exit_c, out_file, perfect, seed_v,
+     ansi_wall, ansi_pattern) = validate(content)
 
     show_solution = False
     current_theme = 0
@@ -220,6 +234,12 @@ def main() -> None:
         ("\033[38;5;219m", "\033[38;5;90m"),
         ("\033[38;5;90m", "\033[38;5;219m"),
     ]
+
+    if ansi_wall is not None or ansi_pattern is not None:
+        wall_final = ansi_wall if ansi_wall is not None else ""
+        pattern_final = ansi_pattern if ansi_pattern is not None else ""
+        themes[0] = (wall_final, pattern_final)
+
     c_wall, c_pattern = themes[current_theme]
 
     seed_msg = handle_generation_flow(width, height, entry, exit_c, out_file,
