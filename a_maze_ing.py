@@ -1,5 +1,6 @@
 import sys
 import random
+import time
 from mazegen.generator import MazeGenerator
 from mazegen.solver import MazeSolver
 
@@ -174,15 +175,22 @@ def handle_display_flow(out_file: str, width: int, height: int,
     matrix = load_maze(out_file)
 
     if matrix:
+        print("\033[2J\033[H", end="")
         renderer = MazeGenerator(width, height, entry, rng=random.Random())
 
         renderer.matrix = matrix
         solution = None
 
         if show_solution:
-            solver = MazeSolver(matrix, entry,
-                                exit_c, perfect=perfect)
+            solver = MazeSolver(matrix, entry, exit_c, perfect=perfect)
             solution = solver.solve()
+            for i in range(1, len(solution) + 1):
+                print("\033[H")
+                print(seed_msg)
+                print(renderer.render(exit_c, solution[:i], wall_color=c_wall,
+                                      pattern_color=c_pattern))
+                time.sleep(0.03)
+            return
 
         print(seed_msg)
         print(renderer.render(exit_c, solution, wall_color=c_wall,
