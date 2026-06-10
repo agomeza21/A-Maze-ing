@@ -256,6 +256,102 @@ def handle_display_flow(out_file: str, width: int, height: int,
                               pattern_color=c_pattern))
 
 
+def handle_parameter_modification(content: dict[str, str],
+                                  themes: list[tuple[str, str]],
+                                  current_theme: int) -> tuple[bool, int]:
+    any_changes = False
+
+    while True:
+        print("\n--- PARAMETERS MODIFICATION ---\n")
+        print("1. Modify a configuration parameter")
+        print("2. Reset to original config.txt values")
+        print("3. Return to main menu")
+
+        sub_choice = input("\nSelect an option "
+                           "(or type 'BACK'): ").strip().upper()
+
+        if sub_choice == "3" or sub_choice == "BACK":
+            print("Returning to main menu...")
+            break
+
+        if sub_choice == "1":
+            valid_keys = [
+                "WIDTH", "HEIGHT", "ENTRY", "EXIT",
+                "OUTPUT_FILE", "PERFECT", "SEED",
+                "COLOR_WALL", "COLOR_PATTERN"
+            ]
+
+            print("\nNOTICE: If you want to REDUCE WIDTH or HEIGHT, "
+                  "make sure to modify ENTRY and EXIT first so "
+                  "they fit within the new smaller boundaries!")
+
+            print("\nCurrent configuration:")
+            for key in valid_keys:
+                print(f"  - {key}: {content.get(key, 'Not defined')}")
+
+            param = input("\nEnter the parameter name to "
+                          "change (or 'BACK'): ").strip().upper()
+            if param == "BACK":
+                continue
+            if param not in valid_keys:
+                print("Error: Invalid parameter name.")
+                continue
+
+            new_value = input(f"Enter new value for {param}: ").strip()
+            old_value = content.get(param)
+            content[param] = new_value
+
+            try:
+                (_, _, _, _, _, _, _, ansi_wall,
+                 ansi_pattern) = validate(content)
+
+                print(f"\n[SUCCESS] {param} updated successfully!")
+                any_changes = True
+
+                if param in ["COLOR_WALL", "COLOR_PATTERN"]:
+                    current_theme = 0
+
+                if ansi_wall is not None or ansi_pattern is not None:
+                    if ansi_wall is not None:
+                        w_final = ansi_wall
+                    else:
+                        w_final = ""
+                    if ansi_pattern is not None:
+                        p_final = ansi_pattern
+                    else:
+                        p_final = ""
+                    themes[0] = (w_final, p_final)
+            except ValueError as e:
+                print(f"\n[INVALID VALUE] {e}")
+                print("Your change was rejected. "
+                      "Restoring previous valid state.")
+
+                if old_value is not None:
+                    content[param] = old_value
+                else:
+                    content.pop(param, None)
+
+        elif sub_choice == "2":
+            try:
+                fresh_content = parse_config(sys.argv[1])
+                (_, _, _, _, _, _, _, ansi_wall,
+                 ansi_pattern) = validate(fresh_content)
+                content.clear()
+                content.update(fresh_content)
+
+                w_final = ansi_wall if ansi_wall is not None else ""
+                p_final = ansi_pattern if ansi_pattern is not None else ""
+                themes[0] = (w_final, p_final)
+                current_theme = 0
+
+                print("\n[SUCCESS] Configuration reset to factory "
+                      "values!")
+                any_changes = True
+            except ValueError as e:
+                print(f"\nError resetting: {e}")
+    return any_changes, current_theme
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         print("Usage: python3 a_maze_ing.py <config_file>")
@@ -351,91 +447,15 @@ def main() -> None:
                                 c_pattern, show_steps)
 
         elif choice == "6":
-            any_changes = False
-
-            while True:
-                print("\n--- PARAMETERS MODIFICATION ---\n")
-                print("1. Modify a configuration parameter")
-                print("2. Reset to original config.txt values")
-                print("3. Return to main menu")
-
-                sub_choice = input("\nSelect an option "
-                                   "(or type 'BACK'): ").strip().upper()
-
-                if sub_choice == "3" or sub_choice == "BACK":
-                    print("Returning to main menu...")
-                    break
-
-                if sub_choice == "1":
-                    valid_keys = [
-                        "WIDTH", "HEIGHT", "ENTRY", "EXIT",
-                        "OUTPUT_FILE", "PERFECT", "SEED",
-                        "COLOR_WALL", "COLOR_PATTERN"
-                    ]
-
-                    print("\nNOTICE: If you want to REDUCE WIDTH or HEIGHT, "
-                          "make sure to modify ENTRY and EXIT first so "
-                          "they fit within the new smaller boundaries!")
-
-                    print("\nCurrent configuration:")
-                    for key in valid_keys:
-                        print(f"  - {key}: {content.get(key, 'Not defined')}")
-
-                    param = input("\nEnter the parameter name to "
-                                  "change (or 'BACK'): ").strip().upper()
-                    if param == "BACK":
-                        continue
-                    if param not in valid_keys:
-                        print("Error: Invalid parameter name.")
-                        continue
-
-                    new_value = input(f"Enter new value for {param}: ").strip()
-                    old_value = content.get(param)
-                    content[param] = new_value
-
-                    try:
-                        (width, height, entry, exit_c, out_file, perfect,
-                         seed_v, ansi_wall, ansi_pattern) = validate(content)
-
-                        print(f"\n[SUCCESS] {param} updated successfully!")
-                        any_changes = True
-
-                        if param in ["COLOR_WALL", "COLOR_PATTERN"]:
-                            current_theme = 0
-
-                        if ansi_wall is not None or ansi_pattern is not None:
-                            if ansi_wall is not None:
-                                w_final = ansi_wall
-                            else:
-                                w_final = ""
-                            if ansi_pattern is not None:
-                                p_final = ansi_pattern
-                            else:
-                                p_final = ""
-                            themes[0] = (w_final, p_final)
-                            c_wall, c_pattern = themes[current_theme]
-                    except ValueError as e:
-                        print(f"\n[INVALID VALUE] {e}")
-                        print("Your change was rejected. "
-                              "Restoring previous valid state.")
-
-                        if old_value is not None:
-                            content[param] = old_value
-                        else:
-                            content.pop(param, None)
-
-                elif sub_choice == "2":
-                    content = parse_config(sys.argv[1])
-                    try:
-                        (width, height, entry, exit_c, out_file,
-                         perfect, seed_v, _, _) = validate(content)
-                        print("\n[SUCCESS] Configuration reset to factory "
-                              "values!")
-                        any_changes = True
-                    except ValueError as e:
-                        print(f"\nError resetting: {e}")
+            any_changes, current_theme = handle_parameter_modification(
+                content, themes, current_theme
+            )
 
             if any_changes:
+                (width, height, entry, exit_c, out_file, perfect,
+                 seed_v, _, _) = validate(content)
+
+                c_wall, c_pattern = themes[current_theme]
                 seed_msg = handle_generation_flow(width, height, entry, exit_c,
                                                   out_file, perfect, seed_v)
                 handle_display_flow(out_file, width, height, entry, exit_c,
