@@ -33,32 +33,29 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
         width = int(content["WIDTH"])
         height = int(content["HEIGHT"])
         if width > 52 or height > 20:
-            print("Error: Maximum dimensions are WIDTH=52 and HEIGHT=20.")
-            sys.exit(1)
+            raise ValueError("Error: Maximum dimensions are WIDTH=52 and "
+                             "HEIGHT=20.")
         if width < 5 or height < 5:
-            print("Error: Minimum dimensions are 5x5.")
-            sys.exit(1)
+            raise ValueError("Error: Minimum dimensions are 5x5.")
     except (KeyError, ValueError):
-        print("Error: Invalid or missing WIDTH/HEIGHT in configuration file.")
-        sys.exit(1)
+        raise ValueError("Error: Invalid or missing WIDTH/HEIGHT in "
+                         "configuration file.")
     try:
         entry_x, entry_y = map(int, content["ENTRY"].split(","))
     except (KeyError, ValueError):
-        print("Error: Invalid or missing ENTRY in configuration file.")
-        sys.exit(1)
+        raise ValueError("Error: Invalid or missing ENTRY in "
+                         "configuration file.")
     if not (0 <= entry_x < width and 0 <= entry_y < height):
-        print("Error: ENTRY coordinates are out of maze bounds.")
-        sys.exit(1)
+        raise ValueError("Error: ENTRY coordinates are out of maze bounds.")
     entry = (entry_y, entry_x)
 
     try:
         exit_x, exit_y = map(int, content["EXIT"].split(","))
     except (KeyError, ValueError):
-        print("Error: Invalid or missing EXIT in configuration file.")
-        sys.exit(1)
+        raise ValueError("Error: Invalid or missing EXIT in "
+                         "configuration file.")
     if not (0 <= exit_x < width and 0 <= exit_y < height):
-        print("Error: EXIT coordinates are out of maze bounds.")
-        sys.exit(1)
+        raise ValueError("Error: EXIT coordinates are out of maze bounds.")
     exit_coords = (exit_y, exit_x)
 
     if height >= 5 and width >= 7:
@@ -66,21 +63,18 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
         start_x = (width - 7) // 2
         if (start_y <= entry[0] < start_y
                 + 5) and (start_x <= entry[1] < start_x + 7):
-            print("Error: ENTRY coordinates cannot be "
+            raise ValueError("Error: ENTRY coordinates cannot be "
                   "inside the central 42 pattern.")
-            sys.exit(1)
         if (start_y <= exit_coords[0] < start_y
                 + 5) and (start_x <= exit_coords[1] < start_x + 7):
-            print("Error: EXIT coordinates cannot be "
+            raise ValueError("Error: EXIT coordinates cannot be "
                   "inside the central 42 pattern.")
-            sys.exit(1)
 
     output_filename = content.get("OUTPUT_FILE")
     if not output_filename:
         output_filename = "maze.txt"
     if not output_filename.endswith(".txt"):
-        print("Error: outputfile is not a '.txt'")
-        sys.exit(1)
+        raise ValueError("Error: outputfile is not a '.txt'")
 
     perfect_str = content.get("PERFECT")
     if not perfect_str:
@@ -92,8 +86,7 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
         elif val == "FALSE":
             perfect = False
         else:
-            print("Error: Invalid PERFECT in configuration file.")
-            sys.exit(1)
+            raise ValueError("Error: Invalid PERFECT in configuration file.")
 
     seed = content.get("SEED")
 
@@ -242,8 +235,12 @@ def main() -> None:
         sys.exit(1)
 
     content = parse_config(sys.argv[1])
-    (width, height, entry, exit_c, out_file, perfect, seed_v,
-     ansi_wall, ansi_pattern) = validate(content)
+    try:
+        (width, height, entry, exit_c, out_file, perfect, seed_v,
+         ansi_wall, ansi_pattern) = validate(content)
+    except ValueError as e:
+        print(e)
+        sys.exit(1)
 
     show_solution = False
     show_steps = False
@@ -263,9 +260,9 @@ def main() -> None:
     ]
 
     if ansi_wall is not None or ansi_pattern is not None:
-        wall_final = ansi_wall if ansi_wall is not None else ""
-        pattern_final = ansi_pattern if ansi_pattern is not None else ""
-        themes[0] = (wall_final, pattern_final)
+        w_final = ansi_wall if ansi_wall is not None else ""
+        p_final = ansi_pattern if ansi_pattern is not None else ""
+        themes[0] = (w_final, p_final)
 
     c_wall, c_pattern = themes[current_theme]
 
@@ -324,6 +321,48 @@ def main() -> None:
                                 c_pattern, show_steps)
 
         elif choice == "6":
+            print("\n--- PARAMETERS MODIFICATION ---")
+            print("1. Modify a configuration parameter")
+            print("2. Reset to original config.txt values")
+            print("3. Return to main menu")
+
+            sub_choice = input("\nSelect an option: ").strip()
+
+            if sub_choice == "1":
+                valid_keys = [
+                    "WIDTH", "HEIGHT", "ENTRY", "EXIT",
+                    "OUTPUT_FILE", "PERFECT", "SEED",
+                    "COLOR_WALL", "COLOR_PATTERN"
+                ]
+                print("\nCurrent configuration:")
+                for key in valid_keys:
+                    print(f"  - {key}: {content.get(key, 'Not defined')}")
+
+                param = input("\nEnter the parameter name to "
+                              "change (or 'BACK'): ").strip().upper()
+                if param not in valid_keys:
+                    print("Error: Invalid parameter name.")
+                    continue
+                new_value = input(f"Enter new value for {param}: ").strip()
+                content[param] = new_value
+
+                (width, height, entry, exit_c, out_file, perfect, seed_v,
+                 ansi_wall, ansi_pattern) = validate(content)
+
+                if ansi_wall is not None or ansi_pattern is not None:
+                    w_final = ansi_wall if ansi_wall is not None else ""
+                    p_final = ansi_pattern if ansi_pattern is not None else ""
+                    themes[0] = (w_final, p_final)
+                if current_theme == 0:
+                    c_wall, c_pattern = themes[0]
+
+                seed_msg = handle_generation_flow(width, height, entry, exit_c,
+                                                  out_file, perfect, seed_v)
+                handle_display_flow(out_file, width, height, entry, exit_c,
+                                    perfect, show_solution, seed_msg,
+                                    c_wall, c_pattern, show_steps)
+
+        elif choice == "7":
             print("Goodbye!")
             break
         else:
