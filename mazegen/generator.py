@@ -215,7 +215,7 @@ class MazeGenerator:
 
         return "\n".join(lines)
 
-    def apply_42(self, before_generating: bool = True) -> None:
+    def apply_42(self, before_generating: bool = True) -> str:
         pattern = [
             [1, 0, 1, 0, 1, 1, 1],
             [1, 0, 1, 0, 0, 0, 1],
@@ -225,9 +225,8 @@ class MazeGenerator:
         ]
 
         if self.height < 7 or self.width < 9:
-            print("Error: 42 pattern will be omitted since the maze is "
-                  "smaller than it")
-            return
+            return ("Error: 42 pattern will be omitted since the maze is "
+                    "smaller than it")
 
         start_y = (self.height - 5) // 2
         start_x = (self.width - 7) // 2
@@ -256,3 +255,5 @@ class MazeGenerator:
                         self.matrix[real_y][real_x - 1] |= (1 << 1)
                     if real_x < self.width - 1:
                         self.matrix[real_y][real_x + 1] |= (1 << 3)
+
+        return ""
