@@ -14,13 +14,21 @@ def parse_config(file: str) -> dict[str, str]:
                 if stripped_line and not stripped_line.startswith("#"):
                     if "=" in stripped_line:
                         key, value = stripped_line.split("=", 1)
-                        content[key.strip().upper()] = value.strip()
+                        key = key.strip().upper()
+                        if key in content:
+                            print(f"Error: Duplicate parameter '{key}' "
+                                  "in configuration file.")
+                            sys.exit(1)
+                        content[key] = value.strip()
                     else:
                         print(f"Error: Invalid configuration "
                               f"format -> '{stripped_line}'")
                         sys.exit(1)
     except FileNotFoundError:
         print(f"Error: configuration file '{file}' not found.")
+        sys.exit(1)
+    except PermissionError:
+        print(f"Error: Permission denied reading configuration file '{file}'.")
         sys.exit(1)
     return content
 
@@ -77,10 +85,14 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
     output_filename = content.get("OUTPUT_FILE")
     if not output_filename:
         output_filename = "maze.txt"
+    if ("/" in output_filename or "\\" in output_filename
+            or ".." in output_filename):
+        raise ValueError("Error: OUTPUT_FILE must be a simple filename, "
+                         "not a path.")
     if not output_filename.endswith(".txt"):
         raise ValueError("Error: outputfile is not a '.txt'")
-    if (output_filename == "maze_blueprint"
-            ".txt" or output_filename == "config.txt"):
+    if (output_filename == "maze_blueprint.txt"
+            or output_filename == "config.txt"):
         raise ValueError("Error: OUTPUT_FILE can't have that name.")
 
     perfect_str = content.get("PERFECT")
@@ -126,7 +138,7 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
 
 
 def save_maze_file(output_filename: str, data: str, entry: tuple[int, int],
-                   exit_coords: tuple[int, int], letters: str) -> None:
+                   exit_coords: tuple[int, int], letters: str) -> str:
     try:
         with open(output_filename, "w") as f:
             f.write(data)
@@ -136,8 +148,11 @@ def save_maze_file(output_filename: str, data: str, entry: tuple[int, int],
             exit_str = f"{exit_coords[1]},{exit_coords[0]}\n"
             f.write(exit_str)
             f.write(f"{letters}\n")
-        print("Maze generated correctly!")
-        print(f"File saved as '{output_filename}'.")
+        return f"Maze generated correctly!\nFile saved as '{output_filename}'."
+    except PermissionError:
+        print(f"Error: Permission denied writing to "
+              f"maze file '{output_filename}'.")
+        sys.exit(1)
     except Exception as e:
         print(f"Error saving file: {e}")
         sys.exit(1)
@@ -158,6 +173,9 @@ def load_maze(file_path: str) -> list[list[int]]:
     except FileNotFoundError:
         print(f"Error: Maze file '{file_path}' not found.")
         sys.exit(1)
+    except PermissionError:
+        print(f"Error: Permission denied reading maze file '{file_path}'.")
+        sys.exit(1)
     except ValueError:
         print(f"Error: Invalid character found in maze file '{file_path}'."
               f"Must be hexadecimal.")
@@ -169,6 +187,8 @@ def load_maze(file_path: str) -> list[list[int]]:
 def handle_generation_flow(width: int, height: int, entry: tuple[int, int],
                            exit_c: tuple[int, int], out_file: str,
                            perfect: bool, seed_v: str | None) -> str:
+    info_msgs = []
+
     if seed_v is None:
         current_seed = str(random.randint(1, 9999999))
         seed_msg = f"\n[INFO] Playing with seed: '{current_seed}'\n"
@@ -179,7 +199,9 @@ def handle_generation_flow(width: int, height: int, entry: tuple[int, int],
 
     maze_rng = random.Random(current_seed)
     generator = MazeGenerator(width, height, entry, rng=maze_rng)
-    generator.apply_42()
+    omission_msg = generator.apply_42()
+    if omission_msg:
+        info_msgs.append(omission_msg)
     generator.generate()
 
     if not perfect:
@@ -188,10 +210,12 @@ def handle_generation_flow(width: int, height: int, entry: tuple[int, int],
     solver = MazeSolver(generator.matrix, entry,
                         exit_c, perfect=perfect)
     solution = solver.solve()
-    save_maze_file(out_file, generator.format_as_hex(),
-                   entry, exit_c, generator.get_letters(solution))
+    save_msg = save_maze_file(out_file, generator.format_as_hex(),
+                              entry, exit_c, generator.get_letters(solution))
+    info_msgs.append(save_msg)
+    info_msgs.append(seed_msg)
 
-    return seed_msg
+    return "\n".join(info_msgs) + "\n"
 
 
 def handle_display_flow(out_file: str, width: int, height: int,
@@ -313,9 +337,12 @@ def main() -> None:
             drawing = MazeGenerator(width, height, entry, rng=random.Random())
             drawing.matrix = matrix_txt
             blueprint = drawing.render(exit_c, use_colors=False)
-            with open("maze_blueprint.txt", "w") as f:
-                f.write(blueprint)
-                print("[BONUS] Blueprint saved as maze_blueprint.txt")
+            try:
+                with open("maze_blueprint.txt", "w") as f:
+                    f.write(blueprint)
+                    print("[BONUS] Blueprint saved as maze_blueprint.txt")
+            except PermissionError:
+                print("Error: Permission denied writing 'maze_blueprint.txt'.")
 
         elif choice == "5":
             show_steps = not show_steps
@@ -373,6 +400,9 @@ def main() -> None:
                         print(f"\n[SUCCESS] {param} updated successfully!")
                         any_changes = True
 
+                        if param in ["COLOR_WALL", "COLOR_PATTERN"]:
+                            current_theme = 0
+
                         if ansi_wall is not None or ansi_pattern is not None:
                             if ansi_wall is not None:
                                 w_final = ansi_wall
@@ -383,8 +413,7 @@ def main() -> None:
                             else:
                                 p_final = ""
                             themes[0] = (w_final, p_final)
-                        if current_theme == 0:
-                            c_wall, c_pattern = themes[0]
+                            c_wall, c_pattern = themes[current_theme]
                     except ValueError as e:
                         print(f"\n[INVALID VALUE] {e}")
                         print("Your change was rejected. "
