@@ -99,11 +99,28 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
 
     color_wall = content.get("COLOR_WALL")
     if color_wall is not None:
+        try:
+            color_wall_int = int(color_wall)
+        except ValueError:
+            print("Error: COLOR_WALL must be a number.")
+            sys.exit(1)
+        if not (0 <= color_wall_int <= 255):
+            print("Error: COLOR_WALL must be between 0 and 255.")
+            sys.exit(1)
         ansi_wall = f"\033[38;5;{color_wall}m"
     else:
         ansi_wall = None
+
     color_pattern = content.get("COLOR_PATTERN")
     if color_pattern is not None:
+        try:
+            color_pattern_int = int(color_pattern)
+        except ValueError:
+            print("Error: COLOR_PATTERN must be a number.")
+            sys.exit(1)
+        if not (0 <= color_pattern_int <= 255):
+            print("Error: COLOR_PATTERN must be between 0 and 255.")
+            sys.exit(1)
         ansi_pattern = f"\033[38;5;{color_pattern}m"
     else:
         ansi_pattern = None
@@ -158,11 +175,11 @@ def handle_generation_flow(width: int, height: int, entry: tuple[int, int],
                            perfect: bool, seed_v: str | None) -> str:
     if seed_v is None:
         current_seed = str(random.randint(1, 9999999))
-        seed_msg = f"\n[INFO] Playing with seed: '{current_seed}'"
+        seed_msg = f"\n[INFO] Playing with seed: '{current_seed}'\n"
     else:
         current_seed = seed_v
         seed_msg = (f"\n[INFO] Playing with config "
-                    f"seed: '{current_seed}'")
+                    f"seed: '{current_seed}'\n")
 
     maze_rng = random.Random(current_seed)
     generator = MazeGenerator(width, height, entry, rng=maze_rng)
@@ -184,7 +201,7 @@ def handle_generation_flow(width: int, height: int, entry: tuple[int, int],
 def handle_display_flow(out_file: str, width: int, height: int,
                         entry: tuple[int, int], exit_c: tuple[int, int],
                         perfect: bool, show_solution: bool, seed_msg: str,
-                        c_wall: str, c_pattern: str) -> None:
+                        c_wall: str, c_pattern: str, show_steps: bool) -> None:
     matrix = load_maze(out_file)
 
     if matrix:
@@ -194,19 +211,28 @@ def handle_display_flow(out_file: str, width: int, height: int,
         renderer.matrix = matrix
         solution = None
 
-        if show_solution:
+        if show_solution or show_steps:
             solver = MazeSolver(matrix, entry, exit_c, perfect=perfect)
             solution = solver.solve()
+        steps_msg = ""
+        if show_steps and solution:
+            steps_msg = (f"[CLUE] Shortest path: {len(solution) - 1} "
+                         f"steps\n")
+        if show_solution and solution:
             for i in range(1, len(solution) + 1):
                 print("\033[H")
                 print(seed_msg)
+                if steps_msg:
+                    print(steps_msg)
                 print(renderer.render(exit_c, solution[:i], wall_color=c_wall,
                                       pattern_color=c_pattern))
                 time.sleep(0.03)
             return
 
         print(seed_msg)
-        print(renderer.render(exit_c, solution, wall_color=c_wall,
+        if steps_msg:
+            print(steps_msg)
+        print(renderer.render(exit_c, None, wall_color=c_wall,
                               pattern_color=c_pattern))
 
 
@@ -220,6 +246,7 @@ def main() -> None:
      ansi_wall, ansi_pattern) = validate(content)
 
     show_solution = False
+    show_steps = False
     current_theme = 0
 
     themes = [
@@ -245,7 +272,7 @@ def main() -> None:
     seed_msg = handle_generation_flow(width, height, entry, exit_c, out_file,
                                       perfect, seed_v)
     handle_display_flow(out_file, width, height, entry, exit_c, perfect,
-                        show_solution, seed_msg, c_wall, c_pattern)
+                        show_solution, seed_msg, c_wall, c_pattern, show_steps)
 
     while True:
         print("\n--- A-MAZE-ING MENU ---\n")
@@ -253,7 +280,9 @@ def main() -> None:
         print("2. Show/Hide solution to maze")
         print("3. Change wall colours")
         print("4. Save maze as drawing")
-        print("5. Exit")
+        print("5. Clue: Show/Hide path steps")
+        print("6. Modify parameters / Reset config")
+        print("7. Exit")
 
         choice = input("\nSelect an option: ").strip()
         c_wall, c_pattern = themes[current_theme]
@@ -264,20 +293,20 @@ def main() -> None:
                                               out_file, perfect, seed_v)
             handle_display_flow(out_file, width, height, entry, exit_c,
                                 perfect, show_solution, seed_msg, c_wall,
-                                c_pattern)
+                                c_pattern, show_steps)
 
         elif choice == "2":
             show_solution = not show_solution
             handle_display_flow(out_file, width, height, entry, exit_c,
                                 perfect, show_solution, seed_msg, c_wall,
-                                c_pattern)
+                                c_pattern, show_steps)
 
         elif choice == "3":
             current_theme = (current_theme + 1) % len(themes)
             c_wall, c_pattern = themes[current_theme]
             handle_display_flow(out_file, width, height, entry, exit_c,
                                 perfect, show_solution, seed_msg, c_wall,
-                                c_pattern)
+                                c_pattern, show_steps)
 
         elif choice == "4":
             matrix_txt = load_maze(out_file)
@@ -289,6 +318,12 @@ def main() -> None:
                 print("[BONUS] Blueprint saved as maze_blueprint.txt")
 
         elif choice == "5":
+            show_steps = not show_steps
+            handle_display_flow(out_file, width, height, entry, exit_c,
+                                perfect, show_solution, seed_msg, c_wall,
+                                c_pattern, show_steps)
+
+        elif choice == "6":
             print("Goodbye!")
             break
         else:
