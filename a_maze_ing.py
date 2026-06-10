@@ -59,6 +59,9 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
         raise ValueError("Error: EXIT coordinates are out of maze bounds.")
     exit_coords = (exit_y, exit_x)
 
+    if entry_x == exit_x and entry_y == exit_y:
+        raise ValueError("Error: ENTRY and EXIT can't be the same.")
+
     if height >= 5 and width >= 7:
         start_y = (height - 5) // 2
         start_x = (width - 7) // 2
