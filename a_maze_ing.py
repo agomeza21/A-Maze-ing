@@ -79,6 +79,9 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
         output_filename = "maze.txt"
     if not output_filename.endswith(".txt"):
         raise ValueError("Error: outputfile is not a '.txt'")
+    if (output_filename == "maze_blueprint"
+            ".txt" or output_filename == "config.txt"):
+        raise ValueError("Error: OUTPUT_FILE can't have that name.")
 
     perfect_str = content.get("PERFECT")
     if not perfect_str:
