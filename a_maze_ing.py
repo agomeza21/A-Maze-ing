@@ -32,14 +32,15 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
     try:
         width = int(content["WIDTH"])
         height = int(content["HEIGHT"])
-        if width > 52 or height > 20:
-            raise ValueError("Error: Maximum dimensions are WIDTH=52 and "
-                             "HEIGHT=20.")
-        if width < 5 or height < 5:
-            raise ValueError("Error: Minimum dimensions are 5x5.")
     except (KeyError, ValueError):
         raise ValueError("Error: Invalid or missing WIDTH/HEIGHT in "
                          "configuration file.")
+    if width > 52 or height > 20:
+        raise ValueError("Error: Maximum dimensions are WIDTH=52 and "
+                         "HEIGHT=20.")
+    if width < 5 or height < 5:
+        raise ValueError("Error: Minimum dimensions are 5x5.")
+
     try:
         entry_x, entry_y = map(int, content["ENTRY"].split(","))
     except (KeyError, ValueError):
@@ -95,11 +96,9 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
         try:
             color_wall_int = int(color_wall)
         except ValueError:
-            print("Error: COLOR_WALL must be a number.")
-            sys.exit(1)
+            raise ValueError("Error: COLOR_WALL must be a number.")
         if not (0 <= color_wall_int <= 255):
-            print("Error: COLOR_WALL must be between 0 and 255.")
-            sys.exit(1)
+            raise ValueError("Error: COLOR_WALL must be between 0 and 255.")
         ansi_wall = f"\033[38;5;{color_wall}m"
     else:
         ansi_wall = None
@@ -109,11 +108,9 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
         try:
             color_pattern_int = int(color_pattern)
         except ValueError:
-            print("Error: COLOR_PATTERN must be a number.")
-            sys.exit(1)
+            raise ValueError("Error: COLOR_PATTERN must be a number.")
         if not (0 <= color_pattern_int <= 255):
-            print("Error: COLOR_PATTERN must be between 0 and 255.")
-            sys.exit(1)
+            raise ValueError("Error: COLOR_PATTERN must be between 0 and 255.")
         ansi_pattern = f"\033[38;5;{color_pattern}m"
     else:
         ansi_pattern = None
@@ -321,41 +318,89 @@ def main() -> None:
                                 c_pattern, show_steps)
 
         elif choice == "6":
-            print("\n--- PARAMETERS MODIFICATION ---")
-            print("1. Modify a configuration parameter")
-            print("2. Reset to original config.txt values")
-            print("3. Return to main menu")
+            any_changes = False
 
-            sub_choice = input("\nSelect an option: ").strip()
+            while True:
+                print("\n--- PARAMETERS MODIFICATION ---\n")
+                print("1. Modify a configuration parameter")
+                print("2. Reset to original config.txt values")
+                print("3. Return to main menu")
 
-            if sub_choice == "1":
-                valid_keys = [
-                    "WIDTH", "HEIGHT", "ENTRY", "EXIT",
-                    "OUTPUT_FILE", "PERFECT", "SEED",
-                    "COLOR_WALL", "COLOR_PATTERN"
-                ]
-                print("\nCurrent configuration:")
-                for key in valid_keys:
-                    print(f"  - {key}: {content.get(key, 'Not defined')}")
+                sub_choice = input("\nSelect an option "
+                                   "(or type 'BACK'): ").strip().upper()
 
-                param = input("\nEnter the parameter name to "
-                              "change (or 'BACK'): ").strip().upper()
-                if param not in valid_keys:
-                    print("Error: Invalid parameter name.")
-                    continue
-                new_value = input(f"Enter new value for {param}: ").strip()
-                content[param] = new_value
+                if sub_choice == "3" or sub_choice == "BACK":
+                    print("Returning to main menu...")
+                    break
 
-                (width, height, entry, exit_c, out_file, perfect, seed_v,
-                 ansi_wall, ansi_pattern) = validate(content)
+                if sub_choice == "1":
+                    valid_keys = [
+                        "WIDTH", "HEIGHT", "ENTRY", "EXIT",
+                        "OUTPUT_FILE", "PERFECT", "SEED",
+                        "COLOR_WALL", "COLOR_PATTERN"
+                    ]
 
-                if ansi_wall is not None or ansi_pattern is not None:
-                    w_final = ansi_wall if ansi_wall is not None else ""
-                    p_final = ansi_pattern if ansi_pattern is not None else ""
-                    themes[0] = (w_final, p_final)
-                if current_theme == 0:
-                    c_wall, c_pattern = themes[0]
+                    print("\nNOTICE: If you want to REDUCE WIDTH or HEIGHT, "
+                          "make sure to modify ENTRY and EXIT first so "
+                          "they fit within the new smaller boundaries!")
 
+                    print("\nCurrent configuration:")
+                    for key in valid_keys:
+                        print(f"  - {key}: {content.get(key, 'Not defined')}")
+
+                    param = input("\nEnter the parameter name to "
+                                  "change (or 'BACK'): ").strip().upper()
+                    if param == "BACK":
+                        continue
+                    if param not in valid_keys:
+                        print("Error: Invalid parameter name.")
+                        continue
+
+                    new_value = input(f"Enter new value for {param}: ").strip()
+                    old_value = content.get(param)
+                    content[param] = new_value
+
+                    try:
+                        (width, height, entry, exit_c, out_file, perfect,
+                         seed_v, ansi_wall, ansi_pattern) = validate(content)
+
+                        print(f"\n[SUCCESS] {param} updated successfully!")
+                        any_changes = True
+
+                        if ansi_wall is not None or ansi_pattern is not None:
+                            if ansi_wall is not None:
+                                w_final = ansi_wall
+                            else:
+                                w_final = ""
+                            if ansi_pattern is not None:
+                                p_final = ansi_pattern
+                            else:
+                                p_final = ""
+                            themes[0] = (w_final, p_final)
+                        if current_theme == 0:
+                            c_wall, c_pattern = themes[0]
+                    except ValueError as e:
+                        print(f"\n[INVALID VALUE] {e}")
+                        print("Your change was rejected. "
+                              "Restoring previous valid state.")
+
+                        if old_value is not None:
+                            content[param] = old_value
+                        else:
+                            content.pop(param, None)
+
+                elif sub_choice == "2":
+                    content = parse_config(sys.argv[1])
+                    try:
+                        (width, height, entry, exit_c, out_file,
+                         perfect, seed_v, _, _) = validate(content)
+                        print("\n[SUCCESS] Configuration reset to factory "
+                              "values!")
+                        any_changes = True
+                    except ValueError as e:
+                        print(f"\nError resetting: {e}")
+
+            if any_changes:
                 seed_msg = handle_generation_flow(width, height, entry, exit_c,
                                                   out_file, perfect, seed_v)
                 handle_display_flow(out_file, width, height, entry, exit_c,
