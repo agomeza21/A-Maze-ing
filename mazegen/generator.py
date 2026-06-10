@@ -3,10 +3,11 @@ import random
 
 class MazeGenerator:
     def __init__(self, width: int, height: int,
-                 entry: tuple[int, int]) -> None:
+                 entry: tuple[int, int], rng: random.Random) -> None:
         self.width = width
         self.height = height
         self.entry = entry
+        self.rng = rng
         self.matrix = [[15 for _ in range(width)] for _ in range(height)]
         self.visited = [[False for _ in range(width)] for _ in range(height)]
         self.movements: dict[int, tuple[tuple[int, int], int]] = {
@@ -34,7 +35,7 @@ class MazeGenerator:
                         and self.visited[new_y][new_x] is False):
                     possible.append((new_y, new_x, direction))
             if possible:
-                selected = random.choice(possible)
+                selected = self.rng.choice(possible)
                 next_y = selected[0]
                 next_x = selected[1]
                 selected_move = selected[2]
@@ -62,7 +63,7 @@ class MazeGenerator:
                              x < start_x + 7):
                     continue
 
-                if random.randint(0, 100) < 50:
+                if self.rng.randint(0, 100) < 50:
                     self.matrix[y][x] &= ~4
                     self.matrix[y + 1][x] &= ~1
 
@@ -136,13 +137,19 @@ class MazeGenerator:
         return char_map.get(directions, " * ")
 
     def render(self, exit_coords: tuple[int, int],
-               solution: list[tuple[int, int]]
-               | None = None, wall_color: str = "",
-               pattern_color: str = "") -> str:
+               solution: list[tuple[int, int]] | None = None,
+               wall_color: str = "", pattern_color: str = "",
+               use_colors: bool = True) -> str:
         reset = "\033[0m"
         cyan = "\033[96m"
         green = "\033[92m"
         red = "\033[91m"
+
+        if use_colors is False:
+            reset = ""
+            cyan = ""
+            green = ""
+            red = ""
 
         def coloring(text: str) -> str:
             return f"{wall_color}{text}{reset}" if wall_color else text

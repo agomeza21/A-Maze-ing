@@ -1,6 +1,6 @@
 import sys
-import os
 import random
+import time
 from mazegen.generator import MazeGenerator
 from mazegen.solver import MazeSolver
 
@@ -27,6 +27,7 @@ def parse_config(file: str) -> dict[str, str]:
 
 def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
                                                tuple[int, int], str, bool,
+                                               str | None, str | None,
                                                str | None]:
     try:
         width = int(content["WIDTH"])
@@ -36,6 +37,7 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
             sys.exit(1)
         if width < 5 or height < 5:
             print("Error: Minimum dimensions are 5x5.")
+            sys.exit(1)
     except (KeyError, ValueError):
         print("Error: Invalid or missing WIDTH/HEIGHT in configuration file.")
         sys.exit(1)
@@ -95,7 +97,19 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
 
     seed = content.get("SEED")
 
-    return width, height, entry, exit_coords, output_filename, perfect, seed
+    color_wall = content.get("COLOR_WALL")
+    if color_wall is not None:
+        ansi_wall = f"\033[38;5;{color_wall}m"
+    else:
+        ansi_wall = None
+    color_pattern = content.get("COLOR_PATTERN")
+    if color_pattern is not None:
+        ansi_pattern = f"\033[38;5;{color_pattern}m"
+    else:
+        ansi_pattern = None
+
+    return (width, height, entry, exit_coords, output_filename,
+            perfect, seed, ansi_wall, ansi_pattern)
 
 
 def save_maze_file(output_filename: str, data: str, entry: tuple[int, int],
@@ -139,17 +153,74 @@ def load_maze(file_path: str) -> list[list[int]]:
     return matrix
 
 
+def handle_generation_flow(width: int, height: int, entry: tuple[int, int],
+                           exit_c: tuple[int, int], out_file: str,
+                           perfect: bool, seed_v: str | None) -> str:
+    if seed_v is None:
+        current_seed = str(random.randint(1, 9999999))
+        seed_msg = f"\n[INFO] Playing with seed: '{current_seed}'"
+    else:
+        current_seed = seed_v
+        seed_msg = (f"\n[INFO] Playing with config "
+                    f"seed: '{current_seed}'")
+
+    maze_rng = random.Random(current_seed)
+    generator = MazeGenerator(width, height, entry, rng=maze_rng)
+    generator.apply_42()
+    generator.generate()
+
+    if not perfect:
+        generator.apply_imperfection()
+
+    solver = MazeSolver(generator.matrix, entry,
+                        exit_c, perfect=perfect)
+    solution = solver.solve()
+    save_maze_file(out_file, generator.format_as_hex(),
+                   entry, exit_c, generator.get_letters(solution))
+
+    return seed_msg
+
+
+def handle_display_flow(out_file: str, width: int, height: int,
+                        entry: tuple[int, int], exit_c: tuple[int, int],
+                        perfect: bool, show_solution: bool, seed_msg: str,
+                        c_wall: str, c_pattern: str) -> None:
+    matrix = load_maze(out_file)
+
+    if matrix:
+        print("\033[2J\033[H", end="")
+        renderer = MazeGenerator(width, height, entry, rng=random.Random())
+
+        renderer.matrix = matrix
+        solution = None
+
+        if show_solution:
+            solver = MazeSolver(matrix, entry, exit_c, perfect=perfect)
+            solution = solver.solve()
+            for i in range(1, len(solution) + 1):
+                print("\033[H")
+                print(seed_msg)
+                print(renderer.render(exit_c, solution[:i], wall_color=c_wall,
+                                      pattern_color=c_pattern))
+                time.sleep(0.03)
+            return
+
+        print(seed_msg)
+        print(renderer.render(exit_c, solution, wall_color=c_wall,
+                              pattern_color=c_pattern))
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         print("Usage: python3 a_maze_ing.py <config_file>")
         sys.exit(1)
 
     content = parse_config(sys.argv[1])
-    width, height, entry, exit_c, out_file, perfect, seed_v = validate(content)
+    (width, height, entry, exit_c, out_file, perfect, seed_v,
+     ansi_wall, ansi_pattern) = validate(content)
 
     show_solution = False
-
-    seed_msg = "Maze seed in memory: Unknown"
+    current_theme = 0
 
     themes = [
         ("", ""),
@@ -163,94 +234,61 @@ def main() -> None:
         ("\033[38;5;219m", "\033[38;5;90m"),
         ("\033[38;5;90m", "\033[38;5;219m"),
     ]
-    current_theme = 0
+
+    if ansi_wall is not None or ansi_pattern is not None:
+        wall_final = ansi_wall if ansi_wall is not None else ""
+        pattern_final = ansi_pattern if ansi_pattern is not None else ""
+        themes[0] = (wall_final, pattern_final)
+
+    c_wall, c_pattern = themes[current_theme]
+
+    seed_msg = handle_generation_flow(width, height, entry, exit_c, out_file,
+                                      perfect, seed_v)
+    handle_display_flow(out_file, width, height, entry, exit_c, perfect,
+                        show_solution, seed_msg, c_wall, c_pattern)
 
     while True:
         print("\n--- A-MAZE-ING MENU ---\n")
-        print("1. Generate and save maze")
+        print("1. Re-generate and save maze")
         print("2. Show/Hide solution to maze")
         print("3. Change wall colours")
-        print("4. Exit")
+        print("4. Save maze as drawing")
+        print("5. Exit")
 
         choice = input("\nSelect an option: ").strip()
-
         c_wall, c_pattern = themes[current_theme]
 
         if choice == "1":
             show_solution = False
-            if seed_v is None:
-                current_seed = random.randint(1, 9999999)
-                seed_msg = f"\n[INFO] Playing with seed: '{current_seed}'"
-                random.seed(current_seed)
-            else:
-                seed_msg = (f"\n[INFO] Playing with config "
-                            f"seed: '{seed_v}'")
-                random.seed(seed_v)
-            generator = MazeGenerator(width, height, entry)
-            generator.apply_42()
-            generator.generate()
-            if not perfect:
-                generator.apply_imperfection()
-            solver = MazeSolver(generator.matrix, entry,
-                                exit_c, perfect=perfect)
-            solution = solver.solve()
-            save_maze_file(out_file, generator.format_as_hex(),
-                           entry, exit_c, generator.get_letters(solution))
-            print(seed_msg)
-            print(generator.render(exit_c, solution if show_solution
-                                   else None, wall_color=c_wall,
-                                   pattern_color=c_pattern))
+            seed_msg = handle_generation_flow(width, height, entry, exit_c,
+                                              out_file, perfect, seed_v)
+            handle_display_flow(out_file, width, height, entry, exit_c,
+                                perfect, show_solution, seed_msg, c_wall,
+                                c_pattern)
 
         elif choice == "2":
             show_solution = not show_solution
-            if os.path.exists(out_file):
-                matrix = load_maze(out_file)
-                if matrix:
-                    renderer = MazeGenerator(width, height, entry)
-                    renderer.matrix = matrix
-                    if show_solution:
-                        solver = MazeSolver(matrix, entry,
-                                            exit_c, perfect=perfect)
-                        solution = solver.solve()
-                        print(seed_msg)
-                        print(renderer.render(exit_c, solution,
-                                              wall_color=c_wall,
-                                              pattern_color=c_pattern))
-                    else:
-                        print(seed_msg)
-                        print(renderer.render(exit_c, None,
-                                              wall_color=c_wall,
-                                              pattern_color=c_pattern))
-            else:
-                print("\n(There is no maze generated. "
-                      "Click 1 to generate one).")
+            handle_display_flow(out_file, width, height, entry, exit_c,
+                                perfect, show_solution, seed_msg, c_wall,
+                                c_pattern)
 
         elif choice == "3":
             current_theme = (current_theme + 1) % len(themes)
             c_wall, c_pattern = themes[current_theme]
-            if os.path.exists(out_file):
-                matrix = load_maze(out_file)
-                if matrix:
-                    renderer = MazeGenerator(width, height, entry)
-                    renderer.matrix = matrix
-                    if show_solution:
-                        solver = MazeSolver(matrix, entry, exit_c,
-                                            perfect=perfect)
-                        solution = solver.solve()
-                        print(seed_msg)
-                        print(renderer.render(exit_c, solution,
-                                              wall_color=c_wall,
-                                              pattern_color=c_pattern))
-                    else:
-                        print(seed_msg)
-                        print(renderer.render(exit_c, None,
-                                              wall_color=c_wall,
-                                              pattern_color=c_pattern))
-            else:
-                print("\n(There is no maze generated. "
-                      "Click 1 to generate one).")
+            handle_display_flow(out_file, width, height, entry, exit_c,
+                                perfect, show_solution, seed_msg, c_wall,
+                                c_pattern)
 
         elif choice == "4":
+            matrix_txt = load_maze(out_file)
+            drawing = MazeGenerator(width, height, entry, rng=random.Random())
+            drawing.matrix = matrix_txt
+            blueprint = drawing.render(exit_c, use_colors=False)
+            with open("maze_blueprint.txt", "w") as f:
+                f.write(blueprint)
+                print("[BONUS] Blueprint saved as maze_blueprint.txt")
+
+        elif choice == "5":
             print("Goodbye!")
             break
         else:
