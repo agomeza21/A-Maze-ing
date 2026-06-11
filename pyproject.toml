@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mazegen"
+version = "1.0.0"
+description = "A reusable maze generator and solver module for 42."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "agomez-a", email = "agomez-a@student.42urduliz.com" },
+    { name = "jcamarer", email = "jcamarer@student.42urduliz.com" }
+]
+
+[tool.setuptools.packages.find]
+include = ["mazegen"]
