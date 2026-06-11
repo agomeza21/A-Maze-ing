@@ -129,7 +129,7 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
 
     perfect_str = content.get("PERFECT")
     if not perfect_str:
-        perfect_str = "True"
+        perfect = True
     else:
         val = perfect_str.upper()
         if val == "TRUE":
@@ -396,7 +396,7 @@ def handle_parameter_modification(content: dict[str, str],
             sub_choice = input("\nSelect an option "
                                "(or type 'BACK'): ").strip().upper()
         except (EOFError, KeyboardInterrupt):
-            print("[CONTROLED EXIT] See you soon!")
+            print("\n[CONTROLED EXIT] See you soon!\n")
             sys.exit(0)
 
         if sub_choice == "3" or sub_choice == "BACK":
@@ -422,7 +422,7 @@ def handle_parameter_modification(content: dict[str, str],
                 param = input("\nEnter the parameter name to "
                               "change (or 'BACK'): ").strip().upper()
             except (EOFError, KeyboardInterrupt):
-                print("[CONTROLED EXIT] See you soon!")
+                print("\n[CONTROLED EXIT] See you soon!\n")
                 sys.exit(0)
 
             if param == "BACK":
@@ -434,7 +434,7 @@ def handle_parameter_modification(content: dict[str, str],
             try:
                 new_value = input(f"Enter new value for {param}: ").strip()
             except (EOFError, KeyboardInterrupt):
-                print("[CONTROLED EXIT] See you soon!")
+                print("\n[CONTROLED EXIT] See you soon!\n")
                 sys.exit(0)
 
             old_value = content.get(param)
@@ -555,7 +555,7 @@ def main() -> None:
         try:
             choice = input("\nSelect an option: ").strip()
         except (EOFError, KeyboardInterrupt):
-            print("[CONTROLED EXIT] See you soon!")
+            print("\n[CONTROLED EXIT] See you soon!\n")
             sys.exit(0)
 
         c_wall, c_pattern = themes[current_theme]
