@@ -225,6 +225,10 @@ def handle_display_flow(out_file: str, width: int, height: int,
     matrix = load_maze(out_file)
 
     if matrix:
+        if len(matrix) != height or len(matrix[0]) != width:
+            print("\n[ERROR] The maze.txt has been modified. The dimensions "
+                  "are not the same.")
+            return
         print("\033[2J\033[H", end="")
         renderer = MazeGenerator(width, height, entry, rng=random.Random())
 
@@ -267,8 +271,12 @@ def handle_parameter_modification(content: dict[str, str],
         print("2. Reset to original config.txt values")
         print("3. Return to main menu")
 
-        sub_choice = input("\nSelect an option "
-                           "(or type 'BACK'): ").strip().upper()
+        try:
+            sub_choice = input("\nSelect an option "
+                               "(or type 'BACK'): ").strip().upper()
+        except (EOFError, KeyboardInterrupt):
+            print("[CONTROLED EXIT] See you soon!")
+            sys.exit(0)
 
         if sub_choice == "3" or sub_choice == "BACK":
             print("Returning to main menu...")
@@ -289,15 +297,25 @@ def handle_parameter_modification(content: dict[str, str],
             for key in valid_keys:
                 print(f"  - {key}: {content.get(key, 'Not defined')}")
 
-            param = input("\nEnter the parameter name to "
-                          "change (or 'BACK'): ").strip().upper()
+            try:
+                param = input("\nEnter the parameter name to "
+                              "change (or 'BACK'): ").strip().upper()
+            except (EOFError, KeyboardInterrupt):
+                print("[CONTROLED EXIT] See you soon!")
+                sys.exit(0)
+
             if param == "BACK":
                 continue
             if param not in valid_keys:
                 print("Error: Invalid parameter name.")
                 continue
 
-            new_value = input(f"Enter new value for {param}: ").strip()
+            try:
+                new_value = input(f"Enter new value for {param}: ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print("[CONTROLED EXIT] See you soon!")
+                sys.exit(0)
+
             old_value = content.get(param)
             content[param] = new_value
 
@@ -357,8 +375,8 @@ def main() -> None:
         print("Usage: python3 a_maze_ing.py <config_file>")
         sys.exit(1)
 
-    content = parse_config(sys.argv[1])
     try:
+        content = parse_config(sys.argv[1])
         (width, height, entry, exit_c, out_file, perfect, seed_v,
          ansi_wall, ansi_pattern) = validate(content)
     except ValueError as e:
@@ -404,7 +422,12 @@ def main() -> None:
         print("6. Modify parameters / Reset config")
         print("7. Exit")
 
-        choice = input("\nSelect an option: ").strip()
+        try:
+            choice = input("\nSelect an option: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("[CONTROLED EXIT] See you soon!")
+            sys.exit(0)
+
         c_wall, c_pattern = themes[current_theme]
 
         if choice == "1":
