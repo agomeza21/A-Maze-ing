@@ -1,10 +1,11 @@
 PYTHON = python3
 MAIN = a_maze_ing.py
 CONFIG = config.txt
+PACKAGE_DIR = mazegen/
 
 install:
 	pip install build flake8 mypy
-	python3 -m build
+	$(PYTHON) -m build
 
 run:
 	$(PYTHON) $(MAIN) $(CONFIG)
@@ -13,14 +14,14 @@ debug:
 	$(PYTHON) -m pdb $(MAIN) $(CONFIG)
 
 clean:
-	rm -rf __pycache__ mazegen/__pycache__ .mypy_cache dist build *.egg-info
+	rm -rf __pycache__ $(PACKAGE_DIR)__pycache__ .mypy_cache dist build *.egg-info
 
 lint:
-	flake8 .
-	mypy --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs $(MAIN) mazegen/
+	flake8 $(MAIN) $(PACKAGE_DIR)
+	mypy --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs $(MAIN) $(PACKAGE_DIR)
 
 lint-strict:
-	flake8 .
-	mypy --strict $(MAIN) mazegen/
+	flake8 $(MAIN) $(PACKAGE_DIR)
+	mypy --strict $(MAIN) $(PACKAGE_DIR)
 
 .PHONY: install run debug clean lint lint-strict

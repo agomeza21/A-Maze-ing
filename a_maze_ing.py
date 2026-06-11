@@ -6,6 +6,20 @@ from mazegen.solver import MazeSolver
 
 
 def parse_config(file: str) -> dict[str, str]:
+    """Read the configuration file and return its contents as a dictionary.
+
+    Each line in the file must follow the KEY=VALUE format.
+    Lines starting with '#' are treated as comments and ignored.
+    If a key appears more than once, or the format is wrong, the program exits.
+
+    Args:
+        file: Path to the configuration file.
+
+    Returns:
+        A dictionary where each key is a config parameter and each value
+        is the corresponding string value from the file.
+    """
+
     content: dict[str, str] = {}
     try:
         with open(file, "r") as f:
@@ -37,6 +51,24 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
                                                tuple[int, int], str, bool,
                                                str | None, str | None,
                                                str | None]:
+    """Check that config values are correct and return them as usable types.
+
+    Reads the raw string dictionary from parse_config and converts each value
+    to its proper type (int, bool, tuple...). Raises ValueError with a clear
+    message if any value is missing, has the wrong type, or is out of range.
+
+    Args:
+        content: Raw config dictionary as returned by parse_config.
+
+    Returns:
+        A tuple with: width, height, entry (row, col), exit (row, col),
+        output filename, perfect flag, seed string, ANSI wall colour code,
+        and ANSI pattern colour code. Colour codes are None if not set.
+
+    Raises:
+        ValueError: If any config value is invalid or missing.
+    """
+
     try:
         width = int(content["WIDTH"])
         height = int(content["HEIGHT"])
@@ -139,6 +171,23 @@ def validate(content: dict[str, str]) -> tuple[int, int, tuple[int, int],
 
 def save_maze_file(output_filename: str, data: str, entry: tuple[int, int],
                    exit_coords: tuple[int, int], letters: str) -> str:
+    """Write the maze data to a text file in the required output format.
+
+    The file contains the hex grid, then an empty line, then the entry
+    coordinates, exit coordinates, and the shortest path as a string of
+    direction letters (N, E, S, W).
+
+    Args:
+        output_filename: Name of the file to write.
+        data: The maze grid formatted as a hex string.
+        entry: Entry cell as (row, col).
+        exit_coords: Exit cell as (row, col).
+        letters: Shortest path directions, e.g. "SSEENW...".
+
+    Returns:
+        A success message string if the file was saved correctly.
+    """
+
     try:
         with open(output_filename, "w") as f:
             f.write(data)
@@ -147,8 +196,9 @@ def save_maze_file(output_filename: str, data: str, entry: tuple[int, int],
             f.write(entry_str)
             exit_str = f"{exit_coords[1]},{exit_coords[0]}\n"
             f.write(exit_str)
-            f.write(f"{letters}\n")
+            f.write(f"{letters}")
         return f"Maze generated correctly!\nFile saved as '{output_filename}'."
+
     except PermissionError:
         print(f"Error: Permission denied writing to "
               f"maze file '{output_filename}'.")
@@ -159,6 +209,19 @@ def save_maze_file(output_filename: str, data: str, entry: tuple[int, int],
 
 
 def load_maze(file_path: str) -> list[list[int]]:
+    """Read a maze file and return its grid as a matrix of integers.
+
+    Reads the hex characters from the file line by line and converts each
+    character to an integer. Stops at the first empty line (the rest of
+    the file contains coordinates and path, not the grid).
+
+    Args:
+        file_path: Path to the maze output file.
+
+    Returns:
+        A 2D list of integers where each value encodes the walls of one cell.
+    """
+
     try:
         with open(file_path, "r") as f:
             matrix: list[list[int]] = []
@@ -170,6 +233,7 @@ def load_maze(file_path: str) -> list[list[int]]:
                 for char in stripped_line:
                     row.append(int(char, 16))
                 matrix.append(row)
+
     except FileNotFoundError:
         print(f"Error: Maze file '{file_path}' not found.")
         sys.exit(1)
@@ -187,6 +251,25 @@ def load_maze(file_path: str) -> list[list[int]]:
 def handle_generation_flow(width: int, height: int, entry: tuple[int, int],
                            exit_c: tuple[int, int], out_file: str,
                            perfect: bool, seed_v: str | None) -> str:
+    """Generate a new maze, solve it, and save it to the output file.
+
+    Creates the generator with the given parameters, stamps the 42 pattern,
+    runs the backtracker algorithm, optionally applies imperfection, solves
+    the maze, and writes the result to disk.
+
+    Args:
+        width: Number of columns in the maze.
+        height: Number of rows in the maze.
+        entry: Entry cell as (row, col).
+        exit_c: Exit cell as (row, col).
+        out_file: Name of the output file to write.
+        perfect: If True, generates a perfect maze (one unique path).
+        seed_v: Seed string for reproducibility. If None, a random one is used.
+
+    Returns:
+        A string with info messages (seed used, save confirmation).
+    """
+
     info_msgs = []
 
     if seed_v is None:
@@ -215,13 +298,33 @@ def handle_generation_flow(width: int, height: int, entry: tuple[int, int],
     info_msgs.append(save_msg)
     info_msgs.append(seed_msg)
 
-    return "\n".join(info_msgs) + "\n"
+    return "\n".join(info_msgs)
 
 
 def handle_display_flow(out_file: str, width: int, height: int,
                         entry: tuple[int, int], exit_c: tuple[int, int],
                         perfect: bool, show_solution: bool, seed_msg: str,
                         c_wall: str, c_pattern: str, show_steps: bool) -> None:
+    """Load the maze from disk and print it to the terminal.
+
+    Reads the current maze file, renders it as ASCII art, and optionally
+    overlays the solution path with an animation. Also prints the seed info
+    and the number of steps if requested.
+
+    Args:
+        out_file: Name of the maze file to load.
+        width: Expected number of columns (used to validate the file).
+        height: Expected number of rows (used to validate the file).
+        entry: Entry cell as (row, col).
+        exit_c: Exit cell as (row, col).
+        perfect: Used to choose the right solver (perfect or imperfect).
+        show_solution: If True, the solution path is drawn on the maze.
+        seed_msg: Info string with the current seed to print above the maze.
+        c_wall: ANSI colour code for the walls.
+        c_pattern: ANSI colour code for the 42 pattern cells.
+        show_steps: If True, prints the number of steps in the shortest path.
+    """
+
     matrix = load_maze(out_file)
 
     if matrix:
@@ -229,6 +332,7 @@ def handle_display_flow(out_file: str, width: int, height: int,
             print("\n[ERROR] The maze.txt has been modified. The dimensions "
                   "are not the same.")
             return
+
         print("\033[2J\033[H", end="")
         renderer = MazeGenerator(width, height, entry, rng=random.Random())
 
@@ -251,6 +355,7 @@ def handle_display_flow(out_file: str, width: int, height: int,
                 print(renderer.render(exit_c, solution[:i], wall_color=c_wall,
                                       pattern_color=c_pattern))
                 time.sleep(0.03)
+
             return
 
         print(seed_msg)
@@ -263,6 +368,22 @@ def handle_display_flow(out_file: str, width: int, height: int,
 def handle_parameter_modification(content: dict[str, str],
                                   themes: list[tuple[str, str]],
                                   current_theme: int) -> tuple[bool, int]:
+    """Show a submenu to let the user change config parameters at runtime.
+
+    The user can modify any valid config key or reset all values back to
+    the original config file. Each change is validated before being applied.
+    If validation fails, the previous value is restored automatically.
+
+    Args:
+        content: The current config dictionary (modified in place).
+        themes: List of available wall/pattern colour theme pairs.
+        current_theme: Index of the currently active theme.
+
+    Returns:
+        A tuple of (any_changes, current_theme) where any_changes is True
+        if at least one parameter was successfully changed.
+    """
+
     any_changes = False
 
     while True:
@@ -367,10 +488,19 @@ def handle_parameter_modification(content: dict[str, str],
                 any_changes = True
             except ValueError as e:
                 print(f"\nError resetting: {e}")
+
     return any_changes, current_theme
 
 
 def main() -> None:
+    """Entry point of the program.
+
+    Reads the config file path from the command line, validates it, generates
+    the first maze, and starts the interactive menu loop where the user can
+    regenerate, solve, recolour, save the maze as a drawing, show the steps,
+    modify the config file, and exit.
+    """
+
     if len(sys.argv) != 2:
         print("Usage: python3 a_maze_ing.py <config_file>")
         sys.exit(1)
@@ -488,6 +618,7 @@ def main() -> None:
         elif choice == "7":
             print("Goodbye!")
             break
+
         else:
             print("Invalid option. Try again.")
 

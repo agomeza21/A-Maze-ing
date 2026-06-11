@@ -2,8 +2,26 @@ import random
 
 
 class MazeGenerator:
+    """Generates and renders a maze using a randomised iterative backtracker.
+
+    The maze is stored as a 2D grid of integers where each value encodes which
+    walls are closed using a 4-bit bitmask (N=bit0, E=bit1, S=bit2, W=bit3).
+    """
+
     def __init__(self, width: int, height: int,
                  entry: tuple[int, int], rng: random.Random) -> None:
+        """Set up an empty maze grid ready to be generated.
+
+        All cells start with all four walls closed (value 15 = 0b1111).
+        No paths are carved yet; call generate() to do that.
+
+        Args:
+            width: Number of columns in the maze.
+            height: Number of rows in the maze.
+            entry: Starting cell for the generation algorithm as (row, col).
+            rng: A seeded random.Random instance for reproducible generation.
+        """
+
         self.width = width
         self.height = height
         self.entry = entry
@@ -18,6 +36,15 @@ class MazeGenerator:
         }
 
     def generate(self) -> None:
+        """Carve paths through the maze using a randomised iterative
+        backtracker.
+
+        Starts from the entry cell and repeatedly moves to a random unvisited
+        neighbour, removing the wall between them. When no unvisited neighbours
+        are available, it backtracks to the previous cell. This continues until
+        every cell has been visited, producing a perfect maze.
+        """
+
         bag: list[tuple[int, int]] = []
         y_actual = self.entry[0]
         x_actual = self.entry[1]
@@ -34,6 +61,7 @@ class MazeGenerator:
                 if (0 <= new_y < self.height and 0 <= new_x < self.width
                         and self.visited[new_y][new_x] is False):
                     possible.append((new_y, new_x, direction))
+
             if possible:
                 selected = self.rng.choice(possible)
                 next_y = selected[0]
@@ -46,6 +74,7 @@ class MazeGenerator:
                 self.visited[next_y][next_x] = True
                 y_actual = next_y
                 x_actual = next_x
+
             else:
                 bag.pop()
                 if bag:
@@ -53,6 +82,14 @@ class MazeGenerator:
                     x_actual = bag[-1][1]
 
     def apply_imperfection(self) -> None:
+        """Remove some walls to create loops and multiple paths in the maze.
+
+        Iterates over a sparse grid of cells (every 3 rows and columns) and
+        randomly removes the south wall of each cell, connecting it to the one
+        below. Cells inside or adjacent to the 42 pattern area are skipped to
+        keep the pattern intact.
+        """
+
         start_y = (self.height - 5) // 2
         start_x = (self.width - 7) // 2
 
@@ -68,6 +105,15 @@ class MazeGenerator:
                     self.matrix[y + 1][x] &= ~1
 
     def format_as_hex(self) -> str:
+        """Convert the maze matrix to a hex string ready for the output file.
+
+        Each cell value (0-15) is written as a single uppercase hex character.
+        Rows are separated by newlines.
+
+        Returns:
+            A multiline string with one hex character per cell.
+        """
+
         lines: list[str] = []
         for line in self.matrix:
             hex_numbers: list[str] = []
@@ -75,9 +121,22 @@ class MazeGenerator:
                 hex_numbers.append(f"{num:X}")
             line_str = "".join(hex_numbers)
             lines.append(line_str)
+
         return "\n".join(lines)
 
     def get_letters(self, solution: list[tuple[int, int]]) -> str:
+        """Convert a solution path into a string of direction letters.
+
+        Compares consecutive cells in the path and determines whether each
+        step goes North, South, East, or West.
+
+        Args:
+            solution: Ordered list of (row, col) cells from entry to exit.
+
+        Returns:
+            A string of direction letters, e.g. "SSEENW...".
+        """
+
         letters: list[str] = []
         for cell_index in range(len(solution) - 1):
             current_y, current_x = solution[cell_index]
@@ -90,10 +149,27 @@ class MazeGenerator:
                 letters.append("E")
             elif next_x - current_x == -1:
                 letters.append("W")
+
         return "".join(letters)
 
     def get_solution_char(self, y: int, x: int,
                           solution: list[tuple[int, int]]) -> str:
+        """Return the Unicode box-drawing character for a cell on the
+        solution path.
+
+        Looks at where the path comes from and where it goes next for this
+        cell, and picks the right character (straight line, corner, etc.) to
+        draw a connected visual path through the maze.
+
+        Args:
+            y: Row of the cell.
+            x: Column of the cell.
+            solution: Full solution path as a list of (row, col) cells.
+
+        Returns:
+            A 3-character string with the appropriate box-drawing character.
+        """
+
         cell_index = solution.index((y, x))
         current_y, current_x = solution[cell_index]
         coming_from = ""
@@ -134,12 +210,30 @@ class MazeGenerator:
             frozenset(["", "N"]): " │ ",
             frozenset(["", "S"]): " │ ",
         }
+
         return char_map.get(directions, " * ")
 
     def render(self, exit_coords: tuple[int, int],
                solution: list[tuple[int, int]] | None = None,
                wall_color: str = "", pattern_color: str = "",
                use_colors: bool = True) -> str:
+        """Build the full ASCII visual of the maze as a string.
+
+        Draws each cell row by row using box-drawing characters for walls. The
+        entry cell is marked as S (green), the exit as E (red), fully walled
+        cells as filled blocks, and the solution path in cyan if provided.
+
+        Args:
+            exit_coords: Exit cell as (row, col), used to mark it red.
+            solution: Optional list of (row, col) cells to draw as a path.
+            wall_color: ANSI escape code string for wall colour.
+            pattern_color: ANSI escape code string for the 42 pattern colour.
+            use_colors: If False, all colour codes are removed (plain text).
+
+        Returns:
+            A multiline string ready to be printed to the terminal.
+        """
+
         reset = "\033[0m"
         cyan = "\033[96m"
         green = "\033[92m"
@@ -152,9 +246,17 @@ class MazeGenerator:
             red = ""
 
         def coloring(text: str) -> str:
+            """Wrap text with the wall colour code, or return it unchanged if
+            no colour is set.
+            """
+
             return f"{wall_color}{text}{reset}" if wall_color else text
 
         def coloring_pattern(text: str) -> str:
+            """Wrap text with the 42 pattern colour code, or return it
+            unchanged if no colour is set.
+            """
+
             return f"{pattern_color}{text}{reset}" if pattern_color else text
 
         lines: list[str] = []
@@ -181,6 +283,7 @@ class MazeGenerator:
                         mid_line = mid_line + coloring("┃") + solution_char
                     else:
                         mid_line = mid_line + " " + solution_char
+
                 else:
                     if (cell & (1 << 3)) != 0:
                         left_wall = coloring("┃")
@@ -201,6 +304,7 @@ class MazeGenerator:
                 mid_line = mid_line + coloring("┃")
             else:
                 mid_line = mid_line + " "
+
             lines.append(top_line)
             lines.append(mid_line)
 
@@ -210,12 +314,26 @@ class MazeGenerator:
                 bottom_line = bottom_line + coloring("+━━━")
             else:
                 bottom_line = bottom_line + coloring("+") + "   "
+
         bottom_line = bottom_line + coloring("+")
         lines.append(bottom_line)
 
         return "\n".join(lines)
 
-    def apply_42(self, before_generating: bool = True) -> str:
+    def apply_42(self) -> str:
+        """Stamp the number 42 into the centre of the maze grid.
+
+        Marks a 5x7 area of cells in the centre of the maze to represent
+        the digits 4 and 2. Cells that are part of the pattern are set to
+        fully walled (value 15) and marked as visited so the generator
+        will not carve through them. Their neighbours are also walled off
+        to keep the pattern isolated.
+
+        Returns:
+            An empty string on success, or an error message string if the
+            maze is too small to fit the pattern.
+        """
+
         pattern = [
             [1, 0, 1, 0, 1, 1, 1],
             [1, 0, 1, 0, 0, 0, 1],

@@ -37,6 +37,9 @@ source venv/bin/activate
 
 # Install dependencies and build the mazegen package
 make install
+
+# Deactivate the virtual enviroment
+deactivate
 ```
 
 ### Running the program
@@ -180,7 +183,42 @@ The core maze logic is fully encapsulated within the `mazegen` package. Below is
 technical specification demonstrating how to integrate and reuse the module, using exact
 code snippets extracted from our main program (`a_maze_ing.py`).
 
-### 1. Instantiate the generator and pass custom parameters
+### 1. Building and installing the `mazegen` package
+
+**Starting from scratch (clean environment):**
+
+```bash
+# 1. Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 2. Install the build tool
+pip install build
+
+# 3. Build the package (generates .whl and .tar.gz inside dist/)
+python3 -m build
+
+# 4. Install the newly built package
+pip install dist/mazegen-1.0.0-py3-none-any.whl
+
+# 5. Check that the package has been installed correctly
+pip list
+```
+
+**Already inside the repo with the environment active:**
+
+```bash
+# 1. Install the build tool if not already installed
+pip install build
+
+# 2. Build the package
+python3 -m build
+
+# 3. Install the newly built package
+pip install dist/mazegen-1.0.0-py3-none-any.whl
+```
+
+### 2. Instantiate the generator and pass custom parameters
 
 To use the generator, import it, initialise a random engine with your desired seed, and
 pass the custom parameters (`width`, `height`, `entry`, `rng`) to the `MazeGenerator`
@@ -203,7 +241,7 @@ if not perfect:
     generator.apply_imperfection()  # removes extra walls to create loops
 ```
 
-### 2. Access the generated structure and compute a solution
+### 3. Access the generated structure and compute a solution
 
 Once `generate()` has run, the raw maze structure is accessible via `generator.matrix`
 (a `list[list[int]]` where each integer encodes the walls of one cell as a bitmask).
