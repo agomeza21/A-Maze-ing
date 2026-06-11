@@ -10,3 +10,6 @@ dist/
 build/
 maze.txt
 maze_blueprint.txt
+*.egg-info/
+dist/
+build/
